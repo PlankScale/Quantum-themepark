@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>量子殿堂博物館 - Quantum Hall of Fame Museum 3D</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #14111f;
+      color: #fff;
+      font-family: "Hiragino Sans", "Noto Sans JP", "Yu Gothic", sans-serif;
+      overflow: hidden;
+      user-select: none;
+    }
+    #canvas-container {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+    }
+    canvas { width: 100%; height: 100%; display: block; cursor: grab; }
+    canvas:active { cursor: grabbing; }
+
+    /* UI Header Overlay */
+    .ui-overlay {
+      position: absolute;
+      top: 16px; left: 16px; right: 16px;
+      display: flex; justify-content: space-between; align-items: center;
+      pointer-events: none; z-index: 10;
+    }
+    .coin-badge {
+      background: rgba(27, 24, 48, 0.88);
+      border: 1px solid #b8923f;
+      color: #f2d48a;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+    .nav-btn {
+      pointer-events: auto;
+      background: rgba(27, 24, 48, 0.9);
+      color: #f2d48a;
+      border: 1px solid #b8923f;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .nav-btn:hover {
+      background: #b8923f;
+      color: #14111f;
+    }
+
+    /* Room Selector Tabs */
+    .room-tabs {
+      position: absolute;
+      bottom: 20px; left: 50%;
+      transform: translateX(-50%);
+      display: flex; gap: 10px;
+      background: rgba(27, 24, 48, 0.85);
+      padding: 8px; border-radius: 30px;
+      border: 1px solid #52487a;
+      z-index: 10;
+    }
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: #d8d2ea;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 13px; font-weight: bold;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .tab-btn.active {
+      background: #b8923f;
+      color: #14111f;
+    }
+
+    .help-hint {
+      position: absolute;
+      bottom: 70px; left: 50%;
+      transform: translateX(-50%);
+      color: #a89fca;
+      font-size: 12px;
+      pointer-events: none;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+    }
+
+    /* Modal / Quiz Dialog */
+    .modal-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(10, 8, 20, 0.75);
+      backdrop-filter: blur(4px);
+      display: flex; justify-content: center; align-items: center;
+      z-index: 100;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .modal-overlay.active {
+      opacity: 1; pointer-events: auto;
+    }
+    .quiz-card {
+      background: #1e1a38;
+      border: 2px solid #b8923f;
+      border-radius: 16px;
+      width: 90%; max-width: 440px;
+      padding: 24px;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.8);
+      text-align: center;
+    }
+    .quiz-title {
+      color: #f2d48a; font-size: 14px; letter-spacing: 1px; margin-bottom: 6px;
+    }
+    .quiz-target-name {
+      font-size: 20px; font-weight: bold; color: #fff; margin-bottom: 4px;
+    }
+    .quiz-target-years {
+      font-size: 12px; color: #a89fca; margin-bottom: 16px;
+    }
+    .quiz-question {
+      font-size: 16px; font-weight: bold; color: #ffffff;
+      background: #282348; padding: 12px; border-radius: 8px; margin-bottom: 18px;
+      border-left: 4px solid #b8923f;
+    }
+    .quiz-options {
+      display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px;
+    }
+    .option-btn {
+      background: #2a244a;
+      border: 1px solid #52487a;
+      color: #fff;
+      padding: 12px; border-radius: 8px;
+      font-size: 15px; font-weight: bold;
+      cursor: pointer; transition: all 0.15s;
+      display: flex; align-items: center; justify-content: flex-start; gap: 12px;
+    }
+    .option-btn:hover {
+      background: #3d3566; border-color: #f2d48a;
+    }
+    .option-btn .num {
+      background: #b8923f; color: #14111f;
+      width: 24px; height: 24px; border-radius: 50%;
+      display: flex; justify-content: center; align-items: center;
+      font-size: 12px;
+    }
+    .modal-close {
+      background: transparent; border: none; color: #a89fca;
+      font-size: 13px; cursor: pointer; text-decoration: underline; margin-top: 8px;
+    }
+    .result-msg {
+      font-size: 18px; font-weight: bold; margin-bottom: 12px; display: none;
+    }
+    .result-msg.correct { color: #4ade80; }
+    .result-msg.incorrect { color: #f87171; }
+  </style>
+</head>
+<body>
+
+  <div id="canvas-container"></div>
+
+  <!-- Header UI -->
+  <div class="ui-overlay">
+    <div class="coin-badge">所持コイン: <span id="coin-amount">10,000</span> G</div>
+    <a href="index.html" class="nav-btn">🏛️ ポータルへ戻る</a>
+  </div>
+
+  <div class="help-hint">ドラッグで視点移動 | 胸像をクリックして出身国クイズに挑戦</div>
+
+  <!-- Room Navigation Tabs -->
+  <div class="room-tabs">
+    <button class="tab-btn active" onclick="switchRoom(0)">第1展示室：量子論の黎明</button>
+    <button class="tab-btn" onclick="switchRoom(1)">第2展示室：量子力学の確立</button>
+    <button class="tab-btn" onclick="switchRoom(2)">第3展示室：QEDと場の量子論</button>
+  </div>
+
+  <!-- Quiz Modal Dialog -->
+  <div class="modal-overlay" id="quiz-modal">
+    <div class="quiz-card">
+      <div class="quiz-title">QUANTUM HALL MUSEUM QUIZ</div>
+      <div class="quiz-target-name" id="q-name">偉人名</div>
+      <div class="quiz-target-years" id="q-years">生没年</div>
+      <div class="quiz-question" id="q-text">クイズ質問内容</div>
+
+      <div class="quiz-options" id="q-options">
+        <!-- Dynamic Option Buttons -->
+      </div>
+
+      <div class="result-msg" id="q-result"></div>
+
+      <button class="modal-close" onclick="closeQuiz()">閉じる</button>
+    </div>
+  </div>
+
+  <!-- Three.js CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <script>
+    // ==========================================
+    // 1. Data Definition: 13 Physicists & Quizzes
+    // ==========================================
+    const physicistsData = [
+      // ROOM 0: 第1展示室（量子論の黎明）
+      { id: 'planck', room: 0, x: -4.5, name: 'MAX PLANCK', years: '1858 - 1947', achievement: 'Nobel Prize in Physics, 1918\nQuantum Hypothesis & Planck Constant',
+        quiz: { q: 'マックス・プランクの出身国は？', options: ['ドイツ 🇩🇪', 'オーストリア 🇦🇹', 'スイス 🇨🇭'], correct: 0 } },
+      { id: 'einstein', room: 0, x: -1.5, name: 'ALBERT EINSTEIN', years: '1879 - 1955', achievement: 'Nobel Prize in Physics, 1921\nPhotoelectric Effect & Light Quanta',
+        quiz: { q: 'アルベルト・アインシュタインの出身国（出生地）は？', options: ['イギリス 🇬🇧', 'ドイツ 🇩🇪', 'アメリカ 🇺🇸'], correct: 1 } },
+      { id: 'bohr', room: 0, x: 1.5, name: 'NIELS BOHR', years: '1885 - 1962', achievement: 'Nobel Prize in Physics, 1922\nBohr Model & Complementarity Principle',
+        quiz: { q: 'ニールス・ボーアの出身国は？', options: ['スウェーデン 🇸🇪', 'オランダ 🇳🇱', 'デンマーク 🇩🇰'], correct: 2 } },
+      { id: 'debroglie', room: 0, x: 4.5, name: 'LOUIS DE BROGLIE', years: '1892 - 1987', achievement: 'Nobel Prize in Physics, 1929\nMatter Waves (Wave-Particle Duality)',
+        quiz: { q: 'ルイ・ド・ブロイの出身国は？', options: ['フランス 🇫🇷', 'ベルギー 🇧🇪', 'スイス 🇨🇭'], correct: 0 } },
+
+      // ROOM 1: 第2展示室（量子力学の確立：ハイゼンベルク＆シュレディンガー同室）
+      { id: 'heisenberg', room: 1, x: -5.0, name: 'WERNER HEISENBERG', years: '1901 - 1976', achievement: 'Nobel Prize in Physics, 1932\nMatrix Mechanics & Uncertainty Principle',
+        quiz: { q: 'ヴェルナー・ハイゼンベルクの出身国は？', options: ['ハンガリー 🇭🇺', 'ドイツ 🇩🇪', 'オーストリア 🇦🇹'], correct: 1 } },
+      { id: 'schrodinger', room: 1, x: -3.0, name: 'ERWIN SCHRÖDINGER', years: '1887 - 1961', achievement: 'Nobel Prize in Physics, 1933\nWave Mechanics & Schrödinger Equation',
+        quiz: { q: 'エルヴィン・シュレディンガーの出身国は？', options: ['アメリカ 🇺🇸', 'スイス 🇨🇭', 'オーストリア 🇦🇹'], correct: 2 } },
+      { id: 'born', room: 1, x: -1.0, name: 'MAX BORN', years: '1882 - 1970', achievement: 'Nobel Prize in Physics, 1954\nProbabilistic Interpretation of Wavefunction',
+        quiz: { q: 'マックス・ボルンの出身国（出生地）は？', options: ['ドイツ 🇩🇪', 'ポーランド 🇵🇱', 'イギリス 🇬🇧'], correct: 0 } },
+      { id: 'pauli', room: 1, x: 1.0, name: 'WOLFGANG PAULI', years: '1900 - 1958', achievement: 'Nobel Prize in Physics, 1945\nPauli Exclusion Principle & Neutrino Hypothesis',
+        quiz: { q: 'ヴォルフガング・パウリの出身国は？', options: ['イタリア 🇮🇹', 'オーストリア 🇦🇹', 'スイス 🇨🇭'], correct: 1 } },
+      { id: 'dirac', room: 1, x: 3.0, name: 'PAUL A. M. DIRAC', years: '1902 - 1984', achievement: 'Nobel Prize in Physics, 1933\nDirac Equation & Prediction of Antimatter',
+        quiz: { q: 'ポール・ディラックの出身国は？', options: ['フランス 🇫🇷', 'アメリカ 🇺🇸', 'イギリス 🇬🇧'], correct: 2 } },
+      { id: 'jordan', room: 1, x: 5.0, name: 'PASCUAL JORDAN', years: '1902 - 1980', achievement: 'Matrix Mechanics & Quantum Field Theory\nCo-author of Dreimännerarbeit',
+        quiz: { q: 'パスカル・ヨルダンの出身国は？', options: ['ドイツ 🇩🇪', 'スペイン 🇪🇸', 'オーストリア 🇦🇹'], correct: 0 } },
+
+      // ROOM 2: 第3展示室（QEDと場の量子論）
+      { id: 'feynman', room: 2, x: -3.0, name: 'RICHARD FEYNMAN', years: '1918 - 1988', achievement: 'Nobel Prize in Physics, 1965\nPath Integral & Feynman Diagrams',
+        quiz: { q: 'リチャード・ファインマンの出身国は？', options: ['カナダ 🇨🇦', 'アメリカ 🇺🇸', 'イギリス 🇬🇧'], correct: 1 } },
+      { id: 'schwinger', room: 2, x: 0.0, name: 'JULIAN SCHWINGER', years: '1918 - 1994', achievement: 'Nobel Prize in Physics, 1965\nRelativistic Quantum Electrodynamics (QED)',
+        quiz: { q: 'ジュリアン・シュウィンガーの出身国は？', options: ['オーストリア 🇦🇹', 'ドイツ 🇩🇪', 'アメリカ 🇺🇸'], correct: 2 } },
+      { id: 'tomonaga', room: 2, x: 3.0, name: 'SHINICHIRO TOMONAGA', years: '1906 - 1979', achievement: 'Nobel Prize in Physics, 1965\nRenormalization Theory in QED',
+        quiz: { q: '朝永振一郎の出身国は？', options: ['日本 🇯🇵', '中国 🇨🇳', '韓国 🇰🇷'], correct: 0 } }
+    ];
+
+    // ==========================================
+    // 2. Economy & State Management
+    // ==========================================
+    let currentCoins = parseInt(localStorage.getItem('quantumParkCoins')) || 10000;
+    const answeredList = JSON.parse(localStorage.getItem('museumAnsweredQuizzes') || '[]');
+
+    function updateCoinDisplay() {
+      document.getElementById('coin-amount').innerText = currentCoins.toLocaleString();
+      localStorage.setItem('quantumParkCoins', currentCoins);
+    }
+    updateCoinDisplay();
+
+    // ==========================================
+    // 3. Three.js Scene Setup
+    // ==========================================
+    const container = document.getElementById('canvas-container');
+    let W = window.innerWidth, H = window.innerHeight;
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x14111f);
+
+    const camera = new THREE.PerspectiveCamera(45, W / H, 0.1, 100);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(W, H);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    container.appendChild(renderer.domElement);
+
+    // Lights
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    scene.add(new THREE.HemisphereLight(0xfff4e0, 0x2a2540, 0.4));
+
+    // Texture Generator for Gold Plaques & Banners
+    function createCanvasTexture(width, height, drawFn) {
+      const c = document.createElement('canvas');
+      c.width = width; c.height = height;
+      drawFn(c.getContext('2d'), width, height);
+      const t = new THREE.CanvasTexture(c);
+      t.anisotropy = 4;
+      return t;
+    }
+
+    // Materials
+    const bronzeMat = new THREE.MeshPhongMaterial({ color: 0x906030, specular: 0xffd9a0, shininess: 60 });
+    const hairMat = new THREE.MeshPhongMaterial({ color: 0x603f20, specular: 0xcaa060, shininess: 40 });
+    const pedestalMat = new THREE.MeshLambertMaterial({ color: 0xc8c0b0 });
+    const wallMat = new THREE.MeshLambertMaterial({ color: 0x27223d });
+    const trimMat = new THREE.MeshLambertMaterial({ color: 0xb8923f });
+
+    // Build Museum Architecture
+    const roomGroup = new THREE.Group();
+    scene.add(roomGroup);
+
+    // Floor
+    const floorTex = createCanvasTexture(512, 512, (ctx, w, h) => {
+      ctx.fillStyle = '#342d4a'; ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = '#4a4168'; ctx.lineWidth = 4;
+      for(let i=0; i<=8; i++) {
+        ctx.beginPath(); ctx.moveTo(i*w/8, 0); ctx.lineTo(i*w/8, h); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, i*h/8); ctx.lineTo(w, i*h/8); ctx.stroke();
+      }
+    });
+    floorTex.wrapS = floorTex.wrapT = THREE.RepeatWrapping;
+    floorTex.repeat.set(8, 4);
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(28, 14), new THREE.MeshLambertMaterial({ map: floorTex }));
+    floor.rotation.x = -Math.PI / 2;
+    roomGroup.add(floor);
+
+    // Back Wall
+    const backWall = new THREE.Mesh(new THREE.PlaneGeometry(28, 8), wallMat);
+    backWall.position.set(0, 4, -7);
+    roomGroup.add(backWall);
+
+    // Gold Trim
+    const trim = new THREE.Mesh(new THREE.BoxGeometry(28, 0.15, 0.1), trimMat);
+    trim.position.set(0, 0.8, -6.95);
+    roomGroup.add(trim);
+
+    // Room Banners
+    const roomBanners = [
+      '第1展示室：量子論の黎明 (Planck, Einstein, Bohr, De Broglie)',
+      '第2展示室：量子力学の確立 (Heisenberg & Schrödinger Room)',
+      '第3展示室：QEDと場の量子論 (Feynman, Schwinger, Tomonaga)'
+    ];
+
+    let bannerMesh;
+    function updateRoomBanner(roomIdx) {
+      if (bannerMesh) roomGroup.remove(bannerMesh);
+      const bannerTex = createCanvasTexture(1024, 128, (ctx, w, h) => {
+        ctx.fillStyle = '#1b1830'; ctx.fillRect(0, 0, w, h);
+        ctx.strokeStyle = '#b8923f'; ctx.lineWidth = 6; ctx.strokeRect(6, 6, w - 12, h - 12);
+        ctx.fillStyle = '#f2d48a'; ctx.font = 'bold 36px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(roomBanners[roomIdx], w / 2, h / 2);
+      });
+      bannerMesh = new THREE.Mesh(new THREE.PlaneGeometry(12, 1.5), new THREE.MeshBasicMaterial({ map: bannerTex }));
+      bannerMesh.position.set(0, 6.5, -6.9);
+      roomGroup.add(bannerMesh);
+    }
+
+    // Busts & Pedestals Generation
+    const interactiveBusts = [];
+
+    physicistsData.forEach(p => {
+      const g = new THREE.Group();
+      g.position.set(p.x, 0, -3.5);
+      g.userData = p;
+
+      // Pedestal
+      const ped = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.3, 1.4), pedestalMat);
+      ped.position.y = 0.65; g.add(ped);
+
+      // Gold Plaque (Name / Years / Achievement)
+      const plaqueTex = createCanvasTexture(512, 256, (ctx, w, h) => {
+        ctx.fillStyle = '#a8803a'; ctx.fillRect(0, 0, w, h);
+        ctx.strokeStyle = '#5a421a'; ctx.lineWidth = 6; ctx.strokeRect(4, 4, w - 8, h - 8);
+        ctx.fillStyle = '#1c150a'; ctx.textAlign = 'center';
+        ctx.font = 'bold 36px Georgia, serif'; ctx.fillText(p.name, w / 2, 52);
+        ctx.font = '28px Georgia, serif'; ctx.fillText(p.years, w / 2, 92);
+        ctx.fillStyle = '#3a2e18'; ctx.fillRect(40, 110, w - 80, 2);
+        ctx.font = '20px sans-serif';
+        const lines = p.achievement.split('\n');
+        lines.forEach((line, idx) => {
+          ctx.fillText(line, w / 2, 145 + idx * 30);
+        });
+      });
+      const plaque = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.6), new THREE.MeshBasicMaterial({ map: plaqueTex }));
+      plaque.position.set(0, 0.68, 0.71); g.add(plaque);
+
+      // Bronze Bust Group
+      const bust = new THREE.Group(); bust.position.y = 1.3;
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.58, 0.35, 16), bronzeMat);
+      base.position.y = 0.18; bust.add(base);
+      const shoulders = new THREE.Mesh(new THREE.SphereGeometry(0.58, 16, 12), bronzeMat);
+      shoulders.scale.set(1.1, 0.5, 0.6); shoulders.position.y = 0.45; bust.add(shoulders);
+      const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.18, 0.3, 12), bronzeMat);
+      neck.position.y = 0.75; bust.add(neck);
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.38, 20, 16), bronzeMat);
+      head.scale.set(0.9, 1.05, 0.9); head.position.y = 1.08; bust.add(head);
+      const hair = new THREE.Mesh(new THREE.SphereGeometry(0.4, 20, 12, 0, Math.PI * 2, 0, Math.PI * 0.45), hairMat);
+      hair.position.set(0, 1.1, -0.02); bust.add(hair);
+
+      g.add(bust);
+      scene.add(g);
+
+      // Spotlight per bust
+      const light = new THREE.SpotLight(0xfff0d0, 1.2, 12, 0.4, 0.5);
+      light.position.set(p.x, 6, -0.5);
+      light.target = ped;
+      scene.add(light);
+
+      interactiveBusts.push(g);
+    });
+
+    // ==========================================
+    // 4. Room Transition Logic
+    // ==========================================
+    let currentRoom = 0;
+    let cameraTargetX = 0;
+
+    function switchRoom(roomIdx) {
+      currentRoom = roomIdx;
+      updateRoomBanner(roomIdx);
+
+      // Filter Visibility
+      interactiveBusts.forEach(b => {
+        b.visible = (b.userData.room === currentRoom);
+      });
+
+      // Update Active Tab Button
+      const tabs = document.querySelectorAll('.tab-btn');
+      tabs.forEach((tab, idx) => {
+        tab.classList.toggle('active', idx === currentRoom);
+      });
+
+      // Reset Camera Pan
+      targetCamPosX = 0;
+    }
+
+    updateRoomBanner(0);
+    switchRoom(0);
+
+    // ==========================================
+    // 5. Controls & Interaction
+    // ==========================================
+    let isDragging = false;
+    let previousMouseX = 0;
+    let targetCamPosX = 0;
+
+    window.addEventListener('pointerdown', (e) => {
+      if (e.target.tagName === 'CANVAS') {
+        isDragging = true;
+        previousMouseX = e.clientX;
+      }
+    });
+
+    window.addEventListener('pointermove', (e) => {
+      if (!isDragging) return;
+      const deltaX = e.clientX - previousMouseX;
+      targetCamPosX -= deltaX * 0.012;
+      targetCamPosX = Math.max(-4, Math.min(4, targetCamPosX));
+      previousMouseX = e.clientX;
+    });
+
+    window.addEventListener('pointerup', () => isDragging = false);
+
+    // Click Detection (Raycaster)
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    window.addEventListener('click', (e) => {
+      if (e.target.tagName !== 'CANVAS' || isDragging) return;
+
+      mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+      const visibleBusts = interactiveBusts.filter(b => b.visible);
+      const intersects = raycaster.intersectObjects(visibleBusts, true);
+
+      if (intersects.length > 0) {
+        let obj = intersects[0].object;
+        while (obj.parent && !obj.userData.name) {
+          obj = obj.parent;
+        }
+        if (obj.userData && obj.userData.quiz) {
+          openQuiz(obj.userData);
+        }
+      }
+    });
+
+    // ==========================================
+    // 6. Quiz Modal Logic
+    // ==========================================
+    let currentActivePerson = null;
+
+    function openQuiz(personData) {
+      currentActivePerson = personData;
+      document.getElementById('q-name').innerText = personData.name;
+      document.getElementById('q-years').innerText = personData.years;
+      document.getElementById('q-text').innerText = personData.quiz.q;
+
+      const optsContainer = document.getElementById('q-options');
+      optsContainer.innerHTML = '';
+      document.getElementById('q-result').style.display = 'none';
+
+      const isAnswered = answeredList.includes(personData.id);
+
+      personData.quiz.options.forEach((optText, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.innerHTML = `<span class="num">${idx + 1}</span> <span>${optText}</span>`;
+        if (isAnswered) {
+          btn.style.opacity = '0.6';
+          btn.disabled = true;
+        } else {
+          btn.onclick = () => submitAnswer(idx);
+        }
+        optsContainer.appendChild(btn);
+      });
+
+      if (isAnswered) {
+        const res = document.getElementById('q-result');
+        res.className = 'result-msg correct';
+        res.innerText = '✓ クリア済み（回答完了）';
+        res.style.display = 'block';
+      }
+
+      document.getElementById('quiz-modal').classList.add('active');
+    }
+
+    function submitAnswer(chosenIdx) {
+      const q = currentActivePerson.quiz;
+      const res = document.getElementById('q-result');
+      const buttons = document.querySelectorAll('.option-btn');
+
+      buttons.forEach(b => b.disabled = true);
+
+      if (chosenIdx === q.correct) {
+        res.className = 'result-msg correct';
+        res.innerText = '🎉 正解！ +300 コイン獲得！';
+        currentCoins += 300;
+        updateCoinDisplay();
+
+        if (!answeredList.includes(currentActivePerson.id)) {
+          answeredList.push(currentActivePerson.id);
+          localStorage.setItem('museumAnsweredQuizzes', JSON.stringify(answeredList));
+        }
+      } else {
+        res.className = 'result-msg incorrect';
+        res.innerText = '❌ 不正解... (0 G)';
+      }
+      res.style.display = 'block';
+    }
+
+    function closeQuiz() {
+      document.getElementById('quiz-modal').classList.remove('active');
+    }
+
+    // ==========================================
+    // 7. Animation Loop & Resize
+    // ==========================================
+    function animate() {
+      requestAnimationFrame(animate);
+
+      // Smooth Camera Movement
+      camera.position.x += (targetCamPosX - camera.position.x) * 0.1;
+      camera.position.y = 2.8;
+      camera.position.z = 2.8;
+      camera.lookAt(camera.position.x, 1.8, -3.5);
+
+      renderer.render(scene, camera);
+    }
+
+    window.addEventListener('resize', () => {
+      W = window.innerWidth; H = window.innerHeight;
+      renderer.setSize(W, H);
+      camera.aspect = W / H;
+      camera.updateProjectionMatrix();
+    });
+
+    animate();
+  </script>
+</body>
+</html>
