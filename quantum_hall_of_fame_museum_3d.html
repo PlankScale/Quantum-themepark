@@ -270,12 +270,14 @@
     scene.add(new THREE.HemisphereLight(0xfff4e0, 0x2a2540, 0.4));
 
     // Texture Generator for Gold Plaques & Banners
+   // Texture Generator for Gold Plaques & Banners
     function createCanvasTexture(width, height, drawFn) {
       const c = document.createElement('canvas');
       c.width = width; c.height = height;
-      drawFn(c.getContext('2d'), width, height);
+      const ctx = c.getContext('2d');
+      drawFn(ctx, width, height);
       const t = new THREE.CanvasTexture(c);
-      t.anisotropy = 4;
+      t.needsUpdate = true; // テクスチャの更新を明示
       return t;
     }
 
