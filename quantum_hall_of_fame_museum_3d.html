@@ -7,7 +7,7 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      background: #14111f;
+      background: #0d0b18;
       color: #fff;
       font-family: "Hiragino Sans", "Noto Sans JP", "Yu Gothic", sans-serif;
       overflow: hidden;
@@ -28,15 +28,33 @@
       display: flex; justify-content: space-between; align-items: center;
       pointer-events: none; z-index: 10;
     }
+    .header-left {
+      display: flex; gap: 12px; align-items: center; pointer-events: auto;
+    }
     .coin-badge {
-      background: rgba(27, 24, 48, 0.88);
+      background: rgba(27, 24, 48, 0.9);
       border: 1px solid #b8923f;
       color: #f2d48a;
       padding: 8px 16px;
       border-radius: 8px;
-      font-size: 16px;
+      font-size: 15px;
       font-weight: bold;
       box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+    .reset-btn {
+      background: rgba(80, 20, 20, 0.85);
+      border: 1px solid #e57373;
+      color: #ffcdd2;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .reset-btn:hover {
+      background: #d32f2f;
+      color: #fff;
     }
     .nav-btn {
       pointer-events: auto;
@@ -166,11 +184,14 @@
 
   <!-- Header UI -->
   <div class="ui-overlay">
-    <div class="coin-badge">所持コイン: <span id="coin-amount">10,000</span> G</div>
+    <div class="header-left">
+      <div class="coin-badge">所持コイン: <span id="coin-amount">10,000</span> G</div>
+      <button class="reset-btn" onclick="resetQuizHistory()">🔄 クイズ履歴リセット</button>
+    </div>
     <a href="index.html" class="nav-btn">🏛️ ポータルへ戻る</a>
   </div>
 
-  <div class="help-hint">ドラッグで視点移動 | 胸像をクリックして出身国クイズに挑戦</div>
+  <div class="help-hint">ドラッグで360°視点見渡し | 胸像をクリックしてクイズに挑戦</div>
 
   <!-- Room Navigation Tabs -->
   <div class="room-tabs">
@@ -187,10 +208,7 @@
       <div class="quiz-target-years" id="q-years">生没年</div>
       <div class="quiz-question" id="q-text">クイズ質問内容</div>
 
-      <div class="quiz-options" id="q-options">
-        <!-- Dynamic Option Buttons -->
-      </div>
-
+      <div class="quiz-options" id="q-options"></div>
       <div class="result-msg" id="q-result"></div>
 
       <button class="modal-close" onclick="closeQuiz()">閉じる</button>
@@ -201,53 +219,56 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
   <script>
-    // 状態変数の宣言（初期化エラーを防ぐため最上部に配置）
-    let targetCamPosX = 0;
-    let isDragging = false;
-    let previousMouseX = 0;
+    // Global State
     let currentRoom = 0;
     let bannerMesh = null;
     let currentActivePerson = null;
+    let answeredList = JSON.parse(localStorage.getItem('museumAnsweredQuizzes') || '[]');
+
+    // Camera Rotation States
+    let isDragging = false;
+    let previousMouseX = 0, previousMouseY = 0;
+    let targetYaw = 0, targetPitch = 0;
+    let currentYaw = 0, currentPitch = 0;
 
     // ==========================================
     // 1. Data Definition
     // ==========================================
     const physicistsData = [
-      { id: 'planck', room: 0, x: -4.5, name: 'MAX PLANCK', years: '1858 - 1947', achievement: 'Nobel Prize in Physics, 1918\nQuantum Hypothesis & Planck Constant',
+      // ROOM 0
+      { id: 'planck', room: 0, x: -5.5, z: -3.0, rotY: Math.PI / 2, name: 'MAX PLANCK', years: '1858 - 1947', achievement: 'Nobel Prize in Physics, 1918\nQuantum Hypothesis & Planck Constant',
         quiz: { q: 'マックス・プランクの出身国は？', options: ['ドイツ 🇩🇪', 'オーストリア 🇦🇹', 'スイス 🇨🇭'], correct: 0 } },
-      { id: 'einstein', room: 0, x: -1.5, name: 'ALBERT EINSTEIN', years: '1879 - 1955', achievement: 'Nobel Prize in Physics, 1921\nPhotoelectric Effect & Light Quanta',
+      { id: 'einstein', room: 0, x: -5.5, z: 2.0, rotY: Math.PI / 2, name: 'ALBERT EINSTEIN', years: '1879 - 1955', achievement: 'Nobel Prize in Physics, 1921\nPhotoelectric Effect & Light Quanta',
         quiz: { q: 'アルベルト・アインシュタインの出身国（出生地）は？', options: ['イギリス 🇬🇧', 'ドイツ 🇩🇪', 'アメリカ 🇺🇸'], correct: 1 } },
-      { id: 'bohr', room: 0, x: 1.5, name: 'NIELS BOHR', years: '1885 - 1962', achievement: 'Nobel Prize in Physics, 1922\nBohr Model & Complementarity Principle',
+      { id: 'bohr', room: 0, x: 5.5, z: -3.0, rotY: -Math.PI / 2, name: 'NIELS BOHR', years: '1885 - 1962', achievement: 'Nobel Prize in Physics, 1922\nBohr Model & Complementarity Principle',
         quiz: { q: 'ニールス・ボーアの出身国は？', options: ['スウェーデン 🇸🇪', 'オランダ 🇳🇱', 'デンマーク 🇩🇰'], correct: 2 } },
-      { id: 'debroglie', room: 0, x: 4.5, name: 'LOUIS DE BROGLIE', years: '1892 - 1987', achievement: 'Nobel Prize in Physics, 1929\nMatter Waves (Wave-Particle Duality)',
+      { id: 'debroglie', room: 0, x: 5.5, z: 2.0, rotY: -Math.PI / 2, name: 'LOUIS DE BROGLIE', years: '1892 - 1987', achievement: 'Nobel Prize in Physics, 1929\nMatter Waves (Wave-Particle Duality)',
         quiz: { q: 'ルイ・ド・ブロイの出身国は？', options: ['フランス 🇫🇷', 'ベルギー 🇧🇪', 'スイス 🇨🇭'], correct: 0 } },
 
-      { id: 'heisenberg', room: 1, x: -5.0, name: 'WERNER HEISENBERG', years: '1901 - 1976', achievement: 'Nobel Prize in Physics, 1932\nMatrix Mechanics & Uncertainty Principle',
+      // ROOM 1
+      { id: 'heisenberg', room: 1, x: -5.5, z: -4.0, rotY: Math.PI / 2, name: 'WERNER HEISENBERG', years: '1901 - 1976', achievement: 'Nobel Prize in Physics, 1932\nMatrix Mechanics & Uncertainty Principle',
         quiz: { q: 'ヴェルナー・ハイゼンベルクの出身国は？', options: ['ハンガリー 🇭🇺', 'ドイツ 🇩🇪', 'オーストリア 🇦🇹'], correct: 1 } },
-      { id: 'schrodinger', room: 1, x: -3.0, name: 'ERWIN SCHRÖDINGER', years: '1887 - 1961', achievement: 'Nobel Prize in Physics, 1933\nWave Mechanics & Schrödinger Equation',
+      { id: 'schrodinger', room: 1, x: -5.5, z: 0.0, rotY: Math.PI / 2, name: 'ERWIN SCHRÖDINGER', years: '1887 - 1961', achievement: 'Nobel Prize in Physics, 1933\nWave Mechanics & Schrödinger Equation',
         quiz: { q: 'エルヴィン・シュレディンガーの出身国は？', options: ['アメリカ 🇺🇸', 'スイス 🇨🇭', 'オーストリア 🇦🇹'], correct: 2 } },
-      { id: 'born', room: 1, x: -1.0, name: 'MAX BORN', years: '1882 - 1970', achievement: 'Nobel Prize in Physics, 1954\nProbabilistic Interpretation of Wavefunction',
+      { id: 'born', room: 1, x: -5.5, z: 4.0, rotY: Math.PI / 2, name: 'MAX BORN', years: '1882 - 1970', achievement: 'Nobel Prize in Physics, 1954\nProbabilistic Interpretation of Wavefunction',
         quiz: { q: 'マックス・ボルンの出身国（出生地）は？', options: ['ドイツ 🇩🇪', 'ポーランド 🇵🇱', 'イギリス 🇬🇧'], correct: 0 } },
-      { id: 'pauli', room: 1, x: 1.0, name: 'WOLFGANG PAULI', years: '1900 - 1958', achievement: 'Nobel Prize in Physics, 1945\nPauli Exclusion Principle & Neutrino Hypothesis',
+      { id: 'pauli', room: 1, x: 5.5, z: -4.0, rotY: -Math.PI / 2, name: 'WOLFGANG PAULI', years: '1900 - 1958', achievement: 'Nobel Prize in Physics, 1945\nPauli Exclusion Principle & Neutrino Hypothesis',
         quiz: { q: 'ヴォルフガング・パウリの出身国は？', options: ['イタリア 🇮🇹', 'オーストリア 🇦🇹', 'スイス 🇨🇭'], correct: 1 } },
-      { id: 'dirac', room: 1, x: 3.0, name: 'PAUL A. M. DIRAC', years: '1902 - 1984', achievement: 'Nobel Prize in Physics, 1933\nDirac Equation & Prediction of Antimatter',
+      { id: 'dirac', room: 1, x: 5.5, z: 0.0, rotY: -Math.PI / 2, name: 'PAUL A. M. DIRAC', years: '1902 - 1984', achievement: 'Nobel Prize in Physics, 1933\nDirac Equation & Prediction of Antimatter',
         quiz: { q: 'ポール・ディラックの出身国は？', options: ['フランス 🇫🇷', 'アメリカ 🇺🇸', 'イギリス 🇬🇧'], correct: 2 } },
-      { id: 'jordan', room: 1, x: 5.0, name: 'PASCUAL JORDAN', years: '1902 - 1980', achievement: 'Matrix Mechanics & Quantum Field Theory\nCo-author of Dreimännerarbeit',
+      { id: 'jordan', room: 1, x: 5.5, z: 4.0, rotY: -Math.PI / 2, name: 'PASCUAL JORDAN', years: '1902 - 1980', achievement: 'Matrix Mechanics & Quantum Field Theory\nCo-author of Dreimännerarbeit',
         quiz: { q: 'パスカル・ヨルダンの出身国は？', options: ['ドイツ 🇩🇪', 'スペイン 🇪🇸', 'オーストリア 🇦🇹'], correct: 0 } },
 
-      { id: 'feynman', room: 2, x: -3.0, name: 'RICHARD FEYNMAN', years: '1918 - 1988', achievement: 'Nobel Prize in Physics, 1965\nPath Integral & Feynman Diagrams',
+      // ROOM 2
+      { id: 'feynman', room: 2, x: -5.5, z: -2.0, rotY: Math.PI / 2, name: 'RICHARD FEYNMAN', years: '1918 - 1988', achievement: 'Nobel Prize in Physics, 1965\nPath Integral & Feynman Diagrams',
         quiz: { q: 'リチャード・ファインマンの出身国は？', options: ['カナダ 🇨🇦', 'アメリカ 🇺🇸', 'イギリス 🇬🇧'], correct: 1 } },
-      { id: 'schwinger', room: 2, x: 0.0, name: 'JULIAN SCHWINGER', years: '1918 - 1994', achievement: 'Nobel Prize in Physics, 1965\nRelativistic Quantum Electrodynamics (QED)',
+      { id: 'schwinger', room: 2, x: -5.5, z: 3.0, rotY: Math.PI / 2, name: 'JULIAN SCHWINGER', years: '1918 - 1994', achievement: 'Nobel Prize in Physics, 1965\nRelativistic Quantum Electrodynamics (QED)',
         quiz: { q: 'ジュリアン・シュウィンガーの出身国は？', options: ['オーストリア 🇦🇹', 'ドイツ 🇩🇪', 'アメリカ 🇺🇸'], correct: 2 } },
-      { id: 'tomonaga', room: 2, x: 3.0, name: 'SHINICHIRO TOMONAGA', years: '1906 - 1979', achievement: 'Nobel Prize in Physics, 1965\nRenormalization Theory in QED',
+      { id: 'tomonaga', room: 2, x: 5.5, z: 0.0, rotY: -Math.PI / 2, name: 'SHINICHIRO TOMONAGA', years: '1906 - 1979', achievement: 'Nobel Prize in Physics, 1965\nRenormalization Theory in QED',
         quiz: { q: '朝永振一郎の出身国は？', options: ['日本 🇯🇵', '中国 🇨🇳', '韓国 🇰🇷'], correct: 0 } }
     ];
 
-    // ==========================================
-    // 2. Economy & State
-    // ==========================================
     let currentCoins = parseInt(localStorage.getItem('quantumParkCoins')) || 10000;
-    const answeredList = JSON.parse(localStorage.getItem('museumAnsweredQuizzes') || '[]');
 
     function updateCoinDisplay() {
       const el = document.getElementById('coin-amount');
@@ -256,27 +277,35 @@
     }
     updateCoinDisplay();
 
+    function resetQuizHistory() {
+      if (confirm('クリアしたクイズの履歴をリセットして再度挑戦できるようにしますか？')) {
+        answeredList = [];
+        localStorage.removeItem('museumAnsweredQuizzes');
+        alert('クイズ履歴をリセットしました。');
+      }
+    }
+
     // ==========================================
-    // 3. Three.js Scene Setup
+    // 2. Three.js Setup & Architecture
     // ==========================================
     const container = document.getElementById('canvas-container');
     let W = window.innerWidth, H = window.innerHeight;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x14111f);
+    scene.background = new THREE.Color(0x0d0b18);
 
-    const camera = new THREE.PerspectiveCamera(45, W / H, 0.1, 100);
-    camera.position.set(0, 2.5, 6); // カメラ初期位置調整
+    const camera = new THREE.PerspectiveCamera(50, W / H, 0.1, 100);
+    camera.position.set(0, 2.2, 7.5);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(W, H);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     container.appendChild(renderer.domElement);
 
-    scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
-    dirLight.position.set(0, 10, 10);
-    scene.add(dirLight);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const mainLight = new THREE.DirectionalLight(0xfff5e6, 0.6);
+    mainLight.position.set(0, 10, 0);
+    scene.add(mainLight);
 
     function createCanvasTexture(width, height, drawFn) {
       const c = document.createElement('canvas');
@@ -288,106 +317,201 @@
       return t;
     }
 
-    const bronzeMat = new THREE.MeshPhongMaterial({ color: 0x906030, specular: 0xffd9a0, shininess: 60 });
-    const hairMat = new THREE.MeshPhongMaterial({ color: 0x603f20, specular: 0xcaa060, shininess: 40 });
-    const pedestalMat = new THREE.MeshLambertMaterial({ color: 0xc8c0b0 });
-    const wallMat = new THREE.MeshLambertMaterial({ color: 0x27223d });
-    const trimMat = new THREE.MeshLambertMaterial({ color: 0xb8923f });
+    // Common Materials
+    const bronzeMat = new THREE.MeshPhongMaterial({ color: 0x8a5a2b, specular: 0xdda868, shininess: 50 });
+    const hairMat = new THREE.MeshPhongMaterial({ color: 0x5a3d1e, specular: 0x9a7548, shininess: 30 });
+    const blackHairMat = new THREE.MeshPhongMaterial({ color: 0x221a14, specular: 0x665544, shininess: 25 });
+    const glassMat = new THREE.MeshPhongMaterial({ color: 0x111111, specular: 0xffffff, shininess: 100, transparent: true, opacity: 0.6 });
+    const blackPedestalMat = new THREE.MeshStandardMaterial({ color: 0x181818, roughness: 0.3, metalness: 0.2 });
+    const wallMat = new THREE.MeshLambertMaterial({ color: 0x221d38 });
+    const doorMat = new THREE.MeshLambertMaterial({ color: 0x4a3b2c });
+    const goldTrimMat = new THREE.MeshLambertMaterial({ color: 0xb8923f });
 
     const roomGroup = new THREE.Group();
     scene.add(roomGroup);
 
-    // Floor
+    // Floor & Ceiling
     const floorTex = createCanvasTexture(512, 512, (ctx, w, h) => {
-      ctx.fillStyle = '#342d4a'; ctx.fillRect(0, 0, w, h);
-      ctx.strokeStyle = '#4a4168'; ctx.lineWidth = 4;
+      ctx.fillStyle = '#26203a'; ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = '#3b3258'; ctx.lineWidth = 4;
       for(let i=0; i<=8; i++) {
         ctx.beginPath(); ctx.moveTo(i*w/8, 0); ctx.lineTo(i*w/8, h); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(0, i*h/8); ctx.lineTo(w, i*h/8); ctx.stroke();
       }
     });
-    floorTex.wrapS = floorTex.wrapT = THREE.RepeatWrapping;
-    floorTex.repeat.set(8, 4);
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(28, 14), new THREE.MeshLambertMaterial({ map: floorTex }));
-    floor.rotation.x = -Math.PI / 2;
-    roomGroup.add(floor);
+    floorTex.wrapS = floorTex.wrapT = THREE.RepeatWrapping; floorTex.repeat.set(6, 8);
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(14, 18), new THREE.MeshLambertMaterial({ map: floorTex }));
+    floor.rotation.x = -Math.PI / 2; roomGroup.add(floor);
 
-    // Back Wall
-    const backWall = new THREE.Mesh(new THREE.PlaneGeometry(28, 8), wallMat);
-    backWall.position.set(0, 4, -7);
-    roomGroup.add(backWall);
+    const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(14, 18), new THREE.MeshLambertMaterial({ color: 0x141024 }));
+    ceiling.position.y = 8; ceiling.rotation.x = Math.PI / 2; roomGroup.add(ceiling);
 
-    // Trim
-    const trim = new THREE.Mesh(new THREE.BoxGeometry(28, 0.15, 0.1), trimMat);
-    trim.position.set(0, 0.8, -6.95);
-    roomGroup.add(trim);
+    // Walls
+    const backWall = new THREE.Mesh(new THREE.PlaneGeometry(14, 8), wallMat); backWall.position.set(0, 4, -9); roomGroup.add(backWall);
+    const frontWall = new THREE.Mesh(new THREE.PlaneGeometry(14, 8), wallMat); frontWall.position.set(0, 4, 9); frontWall.rotation.y = Math.PI; roomGroup.add(frontWall);
+    const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(18, 8), wallMat); leftWall.position.set(-7, 4, 0); leftWall.rotation.y = Math.PI / 2; roomGroup.add(leftWall);
+    const rightWall = new THREE.Mesh(new THREE.PlaneGeometry(18, 8), wallMat); rightWall.position.set(7, 4, 0); rightWall.rotation.y = -Math.PI / 2; roomGroup.add(rightWall);
 
-    // Room Banners
+    // Doors
+    function createDoor(zPos, isExit) {
+      const g = new THREE.Group(); g.position.set(0, 0, zPos);
+      const frame = new THREE.Mesh(new THREE.BoxGeometry(3.2, 4.8, 0.2), goldTrimMat); frame.position.y = 2.4; g.add(frame);
+      const door = new THREE.Mesh(new THREE.BoxGeometry(2.8, 4.4, 0.15), doorMat); door.position.y = 2.2; g.add(door);
+      const signTex = createCanvasTexture(256, 64, (ctx, w, h) => {
+        ctx.fillStyle = isExit ? '#8b0000' : '#1b4d2e'; ctx.fillRect(0, 0, w, h);
+        ctx.strokeStyle = '#f2d48a'; ctx.lineWidth = 4; ctx.strokeRect(4, 4, w-8, h-8);
+        ctx.fillStyle = '#ffffff'; ctx.font = 'bold 24px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(isExit ? 'EXIT（次室へ）' : 'ENTRANCE（入口）', w / 2, h / 2);
+      });
+      const sign = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 0.5), new THREE.MeshBasicMaterial({ map: signTex }));
+      sign.position.set(0, 4.8, isExit ? 0.15 : -0.15); if (!isExit) sign.rotation.y = Math.PI; g.add(sign);
+      return g;
+    }
+    roomGroup.add(createDoor(-8.9, true));
+    roomGroup.add(createDoor(8.9, false));
+
+    // Banners
     const roomBanners = [
       '第1展示室：量子論の黎明 (Planck, Einstein, Bohr, De Broglie)',
       '第2展示室：量子力学の確立 (Heisenberg & Schrödinger Room)',
       '第3展示室：QEDと場の量子論 (Feynman, Schwinger, Tomonaga)'
     ];
-
     function updateRoomBanner(roomIdx) {
-      if (bannerMesh) {
-        roomGroup.remove(bannerMesh);
-      }
+      if (bannerMesh) roomGroup.remove(bannerMesh);
       const bannerTex = createCanvasTexture(1024, 128, (ctx, w, h) => {
         ctx.fillStyle = '#1b1830'; ctx.fillRect(0, 0, w, h);
         ctx.strokeStyle = '#b8923f'; ctx.lineWidth = 6; ctx.strokeRect(6, 6, w - 12, h - 12);
-        ctx.fillStyle = '#f2d48a'; ctx.font = 'bold 32px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#f2d48a'; ctx.font = 'bold 30px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText(roomBanners[roomIdx], w / 2, h / 2);
       });
-      bannerMesh = new THREE.Mesh(new THREE.PlaneGeometry(12, 1.5), new THREE.MeshBasicMaterial({ map: bannerTex }));
-      bannerMesh.position.set(0, 6.5, -6.9);
-      roomGroup.add(bannerMesh);
+      bannerMesh = new THREE.Mesh(new THREE.PlaneGeometry(10, 1.2), new THREE.MeshBasicMaterial({ map: bannerTex }));
+      bannerMesh.position.set(0, 6.8, -8.85); roomGroup.add(bannerMesh);
     }
 
-    // Busts & Pedestals Generation
+    // ==========================================
+    // 3. Individual Bust Generators (13 Personas)
+    // ==========================================
+    function buildBaseBust(headScaleX = 0.9, headScaleY = 1.05, headScaleZ = 0.9) {
+      const bust = new THREE.Group();
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.56, 0.35, 16), bronzeMat); base.position.y = 0.18; bust.add(base);
+      const shoulders = new THREE.Mesh(new THREE.SphereGeometry(0.58, 16, 12), bronzeMat); shoulders.scale.set(1.1, 0.5, 0.6); shoulders.position.y = 0.45; bust.add(shoulders);
+      const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.18, 0.3, 12), bronzeMat); neck.position.y = 0.75; bust.add(neck);
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.38, 20, 16), bronzeMat); head.scale.set(headScaleX, headScaleY, headScaleZ); head.position.y = 1.08; bust.add(head);
+      return bust;
+    }
+
+    function createCustomBust(id) {
+      let bust;
+      if (id === 'planck') {
+        bust = buildBaseBust(0.88, 1.1, 0.92);
+        const sideHairL = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 12), hairMat); sideHairL.scale.set(0.6, 0.9, 1.1); sideHairL.position.set(-0.32, 1.12, -0.05); bust.add(sideHairL);
+        const sideHairR = sideHairL.clone(); sideHairR.position.x = 0.32; bust.add(sideHairR);
+        const mustache = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.04, 8, 16, Math.PI), hairMat); mustache.rotation.x = Math.PI / 1.8; mustache.position.set(0, 0.98, 0.33); bust.add(mustache);
+        const lensGeo = new THREE.TorusGeometry(0.09, 0.015, 8, 16);
+        const frameL = new THREE.Mesh(lensGeo, bronzeMat); frameL.position.set(-0.14, 1.16, 0.35); bust.add(frameL);
+        const frameR = new THREE.Mesh(lensGeo, bronzeMat); frameR.position.set(0.14, 1.16, 0.35); bust.add(frameR);
+      }
+      else if (id === 'einstein') {
+        bust = buildBaseBust(0.95, 1.0, 0.95);
+        const wildHair = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 12), hairMat); wildHair.scale.set(1.2, 1.1, 1.1); wildHair.position.set(0, 1.18, -0.05); bust.add(wildHair);
+        const stache = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 8), hairMat); stache.scale.set(1.5, 0.5, 0.6); stache.position.set(0, 0.96, 0.35); bust.add(stache);
+      }
+      else if (id === 'bohr') {
+        bust = buildBaseBust(0.92, 1.2, 0.95); // 長顔・重厚な顎
+        const topHair = new THREE.Mesh(new THREE.SphereGeometry(0.38, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.35), hairMat); topHair.position.set(0, 1.18, -0.05); bust.add(topHair);
+        const browL = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.04, 0.05), hairMat); browL.position.set(-0.14, 1.16, 0.36); browL.rotation.z = -0.1; bust.add(browL);
+        const browR = browL.clone(); browR.position.x = 0.14; browR.rotation.z = 0.1; bust.add(browR);
+      }
+      else if (id === 'debroglie') {
+        bust = buildBaseBust(0.88, 1.05, 0.9);
+        const hair = new THREE.Mesh(new THREE.SphereGeometry(0.41, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.4), hairMat); hair.position.set(0, 1.12, -0.02); bust.add(hair);
+        const thinStache = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.025, 0.03), hairMat); thinStache.position.set(0, 0.96, 0.35); bust.add(thinStache);
+      }
+      else if (id === 'heisenberg') {
+        bust = buildBaseBust(0.9, 1.05, 0.9);
+        const waveHair = new THREE.Mesh(new THREE.SphereGeometry(0.42, 16, 12), hairMat); waveHair.scale.set(1.0, 0.8, 1.05); waveHair.position.set(0, 1.18, -0.02); bust.add(waveHair);
+      }
+      else if (id === 'schrodinger') {
+        bust = buildBaseBust(0.86, 1.05, 0.9);
+        const hair = new THREE.Mesh(new THREE.SphereGeometry(0.4, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.4), hairMat); hair.position.set(0, 1.12, -0.02); bust.add(hair);
+        const lensGeo = new THREE.TorusGeometry(0.08, 0.012, 8, 16);
+        const frameL = new THREE.Mesh(lensGeo, bronzeMat); frameL.position.set(-0.13, 1.12, 0.34); bust.add(frameL);
+        const frameR = new THREE.Mesh(lensGeo, bronzeMat); frameR.position.set(0.13, 1.12, 0.34); bust.add(frameR);
+      }
+      else if (id === 'born') {
+        bust = buildBaseBust(0.95, 1.0, 0.95);
+        const sideHair = new THREE.Mesh(new THREE.SphereGeometry(0.38, 16, 10, 0, Math.PI*2, Math.PI*0.2, Math.PI*0.3), hairMat); sideHair.position.set(0, 1.08, -0.05); bust.add(sideHair);
+      }
+      else if (id === 'pauli') {
+        bust = buildBaseBust(1.05, 1.0, 1.0); // ふくよかな丸顔
+        const hair = new THREE.Mesh(new THREE.SphereGeometry(0.42, 16, 10, 0, Math.PI*2, 0, Math.PI*0.35), hairMat); hair.position.set(0, 1.12, -0.02); bust.add(hair);
+      }
+      else if (id === 'dirac') {
+        bust = buildBaseBust(0.78, 1.18, 0.82); // 長身面長
+        const hair = new THREE.Mesh(new THREE.SphereGeometry(0.36, 16, 10, 0, Math.PI*2, 0, Math.PI*0.38), hairMat); hair.position.set(0, 1.18, -0.02); bust.add(hair);
+      }
+      else if (id === 'jordan') {
+        bust = buildBaseBust(0.9, 1.02, 0.9);
+        const hair = new THREE.Mesh(new THREE.SphereGeometry(0.4, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.4), hairMat); hair.position.set(0, 1.12, -0.02); bust.add(hair);
+      }
+      else if (id === 'feynman') {
+        bust = buildBaseBust(0.92, 1.05, 0.92);
+        const backHair = new THREE.Mesh(new THREE.SphereGeometry(0.44, 16, 12), hairMat); backHair.scale.set(1.05, 0.85, 1.1); backHair.position.set(0, 1.15, -0.05); bust.add(backHair);
+      }
+      else if (id === 'schwinger') {
+        bust = buildBaseBust(0.92, 1.02, 0.92);
+        const hair = new THREE.Mesh(new THREE.SphereGeometry(0.41, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.38), hairMat); hair.position.set(0, 1.12, -0.02); bust.add(hair);
+        const rectFrameGeo = new THREE.BoxGeometry(0.16, 0.12, 0.02);
+        const frameL = new THREE.Mesh(rectFrameGeo, bronzeMat); frameL.position.set(-0.14, 1.1, 0.35); bust.add(frameL);
+        const frameR = new THREE.Mesh(rectFrameGeo, bronzeMat); frameR.position.set(0.14, 1.1, 0.35); bust.add(frameR);
+      }
+      else if (id === 'tomonaga') {
+        bust = buildBaseBust(0.88, 1.05, 0.88);
+        const hair = new THREE.Mesh(new THREE.SphereGeometry(0.4, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.38), blackHairMat); hair.position.set(0, 1.12, -0.02); bust.add(hair);
+        const lensGeo = new THREE.TorusGeometry(0.075, 0.012, 8, 16);
+        const frameL = new THREE.Mesh(lensGeo, bronzeMat); frameL.position.set(-0.13, 1.1, 0.34); bust.add(frameL);
+        const frameR = new THREE.Mesh(lensGeo, bronzeMat); frameR.position.set(0.13, 1.1, 0.34); bust.add(frameR);
+      }
+      return bust;
+    }
+
+    // Bust Placement
     const interactiveBusts = [];
 
     physicistsData.forEach(p => {
       const g = new THREE.Group();
-      g.position.set(p.x, 0, -3.5);
+      g.position.set(p.x, 0, p.z);
+      g.rotation.y = p.rotY;
       g.userData = p;
 
-      const ped = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.3, 1.4), pedestalMat);
+      // Pedestal
+      const ped = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.3, 1.4), blackPedestalMat);
       ped.position.y = 0.65; g.add(ped);
 
+      // Gold Plaque
       const plaqueTex = createCanvasTexture(512, 256, (ctx, w, h) => {
         ctx.fillStyle = '#a8803a'; ctx.fillRect(0, 0, w, h);
-        ctx.strokeStyle = '#5a421a'; ctx.lineWidth = 6; ctx.strokeRect(4, 4, w - 8, h - 8);
+        ctx.strokeStyle = '#4a3212'; ctx.lineWidth = 6; ctx.strokeRect(4, 4, w - 8, h - 8);
         ctx.fillStyle = '#1c150a'; ctx.textAlign = 'center';
         ctx.font = 'bold 36px Georgia, serif'; ctx.fillText(p.name, w / 2, 52);
         ctx.font = '28px Georgia, serif'; ctx.fillText(p.years, w / 2, 92);
         ctx.fillStyle = '#3a2e18'; ctx.fillRect(40, 110, w - 80, 2);
         ctx.font = '20px sans-serif';
         const lines = p.achievement.split('\n');
-        lines.forEach((line, idx) => {
-          ctx.fillText(line, w / 2, 145 + idx * 30);
-        });
+        lines.forEach((line, idx) => ctx.fillText(line, w / 2, 145 + idx * 30));
       });
       const plaque = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.6), new THREE.MeshBasicMaterial({ map: plaqueTex }));
       plaque.position.set(0, 0.68, 0.71); g.add(plaque);
 
-      const bust = new THREE.Group(); bust.position.y = 1.3;
-      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.58, 0.35, 16), bronzeMat);
-      base.position.y = 0.18; bust.add(base);
-      const shoulders = new THREE.Mesh(new THREE.SphereGeometry(0.58, 16, 12), bronzeMat);
-      shoulders.scale.set(1.1, 0.5, 0.6); shoulders.position.y = 0.45; bust.add(shoulders);
-      const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.18, 0.3, 12), bronzeMat);
-      neck.position.y = 0.75; bust.add(neck);
-      const head = new THREE.Mesh(new THREE.SphereGeometry(0.38, 20, 16), bronzeMat);
-      head.scale.set(0.9, 1.05, 0.9); head.position.y = 1.08; bust.add(head);
-      const hair = new THREE.Mesh(new THREE.SphereGeometry(0.4, 20, 12, 0, Math.PI * 2, 0, Math.PI * 0.45), hairMat);
-      hair.position.set(0, 1.1, -0.02); bust.add(hair);
+      // Bust
+      const bust = createCustomBust(p.id);
+      bust.position.y = 1.3; g.add(bust);
 
-      g.add(bust);
       scene.add(g);
 
-      const light = new THREE.SpotLight(0xfff0d0, 1.5, 12, 0.4, 0.5);
-      light.position.set(p.x, 6, -0.5);
+      // Spotlight
+      const light = new THREE.SpotLight(0xfff0d0, 1.4, 12, 0.45, 0.5);
+      light.position.set(p.x > 0 ? p.x - 2 : p.x + 2, 6, p.z);
       light.target = ped;
       scene.add(light);
 
@@ -395,43 +519,30 @@
     });
 
     // ==========================================
-    // 4. Room Transition Logic
+    // 4. Room Switch & Interaction
     // ==========================================
     function switchRoom(roomIdx) {
       currentRoom = roomIdx;
       updateRoomBanner(roomIdx);
-
-      interactiveBusts.forEach(b => {
-        b.visible = (b.userData.room === currentRoom);
-      });
-
+      interactiveBusts.forEach(b => { b.visible = (b.userData.room === currentRoom); });
       const tabs = document.querySelectorAll('.tab-btn');
-      tabs.forEach((tab, idx) => {
-        tab.classList.toggle('active', idx === currentRoom);
-      });
-
-      targetCamPosX = 0;
+      tabs.forEach((tab, idx) => { tab.classList.toggle('active', idx === currentRoom); });
+      targetYaw = 0; targetPitch = 0;
     }
-
-    // 初期化実行
     switchRoom(0);
 
-    // ==========================================
-    // 5. Controls & Interaction
-    // ==========================================
     window.addEventListener('pointerdown', (e) => {
       if (e.target.tagName === 'CANVAS') {
-        isDragging = true;
-        previousMouseX = e.clientX;
+        isDragging = true; previousMouseX = e.clientX; previousMouseY = e.clientY;
       }
     });
 
     window.addEventListener('pointermove', (e) => {
       if (!isDragging) return;
-      const deltaX = e.clientX - previousMouseX;
-      targetCamPosX -= deltaX * 0.012;
-      targetCamPosX = Math.max(-4, Math.min(4, targetCamPosX));
-      previousMouseX = e.clientX;
+      targetYaw -= (e.clientX - previousMouseX) * 0.005;
+      targetPitch -= (e.clientY - previousMouseY) * 0.005;
+      targetPitch = Math.max(-Math.PI / 3, Math.min(Math.PI / 3, targetPitch));
+      previousMouseX = e.clientX; previousMouseY = e.clientY;
     });
 
     window.addEventListener('pointerup', () => isDragging = false);
@@ -441,50 +552,37 @@
 
     window.addEventListener('click', (e) => {
       if (e.target.tagName !== 'CANVAS' || isDragging) return;
-
       mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
       mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
-
       raycaster.setFromCamera(mouse, camera);
       const visibleBusts = interactiveBusts.filter(b => b.visible);
       const intersects = raycaster.intersectObjects(visibleBusts, true);
-
       if (intersects.length > 0) {
         let obj = intersects[0].object;
-        while (obj.parent && !obj.userData.name) {
-          obj = obj.parent;
-        }
-        if (obj.userData && obj.userData.quiz) {
-          openQuiz(obj.userData);
-        }
+        while (obj.parent && !obj.userData.name) { obj = obj.parent; }
+        if (obj.userData && obj.userData.quiz) { openQuiz(obj.userData); }
       }
     });
 
     // ==========================================
-    // 6. Quiz Modal Logic
+    // 5. Quiz Modal Logic
     // ==========================================
     function openQuiz(personData) {
       currentActivePerson = personData;
       document.getElementById('q-name').innerText = personData.name;
       document.getElementById('q-years').innerText = personData.years;
       document.getElementById('q-text').innerText = personData.quiz.q;
-
       const optsContainer = document.getElementById('q-options');
       optsContainer.innerHTML = '';
       document.getElementById('q-result').style.display = 'none';
 
       const isAnswered = answeredList.includes(personData.id);
-
       personData.quiz.options.forEach((optText, idx) => {
         const btn = document.createElement('button');
         btn.className = 'option-btn';
         btn.innerHTML = `<span class="num">${idx + 1}</span> <span>${optText}</span>`;
-        if (isAnswered) {
-          btn.style.opacity = '0.6';
-          btn.disabled = true;
-        } else {
-          btn.onclick = () => submitAnswer(idx);
-        }
+        if (isAnswered) { btn.style.opacity = '0.6'; btn.disabled = true; }
+        else { btn.onclick = () => submitAnswer(idx); }
         optsContainer.appendChild(btn);
       });
 
@@ -494,7 +592,6 @@
         res.innerText = '✓ クリア済み（回答完了）';
         res.style.display = 'block';
       }
-
       document.getElementById('quiz-modal').classList.add('active');
     }
 
@@ -502,15 +599,12 @@
       const q = currentActivePerson.quiz;
       const res = document.getElementById('q-result');
       const buttons = document.querySelectorAll('.option-btn');
-
       buttons.forEach(b => b.disabled = true);
 
       if (chosenIdx === q.correct) {
         res.className = 'result-msg correct';
         res.innerText = '🎉 正解！ +300 コイン獲得！';
-        currentCoins += 300;
-        updateCoinDisplay();
-
+        currentCoins += 300; updateCoinDisplay();
         if (!answeredList.includes(currentActivePerson.id)) {
           answeredList.push(currentActivePerson.id);
           localStorage.setItem('museumAnsweredQuizzes', JSON.stringify(answeredList));
@@ -527,28 +621,26 @@
     }
 
     // ==========================================
-    // 7. Animation Loop & Resize
+    // 6. Render Loop
     // ==========================================
     function animate() {
       requestAnimationFrame(animate);
+      currentYaw += (targetYaw - currentYaw) * 0.1;
+      currentPitch += (targetPitch - currentPitch) * 0.1;
 
-      // Smooth Camera Movement
-      camera.position.x += (targetCamPosX - camera.position.x) * 0.1;
-      camera.position.y = 2.5;
-      camera.position.z = 5.0;
-      camera.lookAt(camera.position.x, 1.8, -3.5);
+      const lookAtX = camera.position.x + Math.sin(currentYaw) * Math.cos(currentPitch);
+      const lookAtY = camera.position.y + Math.sin(currentPitch);
+      const lookAtZ = camera.position.z - Math.cos(currentYaw) * Math.cos(currentPitch);
 
+      camera.lookAt(lookAtX, lookAtY, lookAtZ);
       renderer.render(scene, camera);
     }
 
     window.addEventListener('resize', () => {
       W = window.innerWidth; H = window.innerHeight;
-      renderer.setSize(W, H);
-      camera.aspect = W / H;
-      camera.updateProjectionMatrix();
+      renderer.setSize(W, H); camera.aspect = W / H; camera.updateProjectionMatrix();
     });
 
-    // レンダリング開始
     animate();
   </script>
 </body>
