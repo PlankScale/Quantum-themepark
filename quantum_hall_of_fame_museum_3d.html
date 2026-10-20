@@ -201,6 +201,14 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
   <script>
+    // 状態変数の宣言（初期化エラーを防ぐため最上部に配置）
+    let targetCamPosX = 0;
+    let isDragging = false;
+    let previousMouseX = 0;
+    let currentRoom = 0;
+    let bannerMesh = null;
+    let currentActivePerson = null;
+
     // ==========================================
     // 1. Data Definition
     // ==========================================
@@ -242,7 +250,8 @@
     const answeredList = JSON.parse(localStorage.getItem('museumAnsweredQuizzes') || '[]');
 
     function updateCoinDisplay() {
-      document.getElementById('coin-amount').innerText = currentCoins.toLocaleString();
+      const el = document.getElementById('coin-amount');
+      if (el) el.innerText = currentCoins.toLocaleString();
       localStorage.setItem('quantumParkCoins', currentCoins);
     }
     updateCoinDisplay();
@@ -257,13 +266,17 @@
     scene.background = new THREE.Color(0x14111f);
 
     const camera = new THREE.PerspectiveCamera(45, W / H, 0.1, 100);
+    camera.position.set(0, 2.5, 6); // カメラ初期位置調整
+
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(W, H);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     container.appendChild(renderer.domElement);
 
-    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-    scene.add(new THREE.HemisphereLight(0xfff4e0, 0x2a2540, 0.4));
+    scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    dirLight.position.set(0, 10, 10);
+    scene.add(dirLight);
 
     function createCanvasTexture(width, height, drawFn) {
       const c = document.createElement('canvas');
@@ -316,7 +329,6 @@
       '第3展示室：QEDと場の量子論 (Feynman, Schwinger, Tomonaga)'
     ];
 
-    let bannerMesh = null;
     function updateRoomBanner(roomIdx) {
       if (bannerMesh) {
         roomGroup.remove(bannerMesh);
@@ -324,7 +336,7 @@
       const bannerTex = createCanvasTexture(1024, 128, (ctx, w, h) => {
         ctx.fillStyle = '#1b1830'; ctx.fillRect(0, 0, w, h);
         ctx.strokeStyle = '#b8923f'; ctx.lineWidth = 6; ctx.strokeRect(6, 6, w - 12, h - 12);
-        ctx.fillStyle = '#f2d48a'; ctx.font = 'bold 36px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#f2d48a'; ctx.font = 'bold 32px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText(roomBanners[roomIdx], w / 2, h / 2);
       });
       bannerMesh = new THREE.Mesh(new THREE.PlaneGeometry(12, 1.5), new THREE.MeshBasicMaterial({ map: bannerTex }));
@@ -374,7 +386,7 @@
       g.add(bust);
       scene.add(g);
 
-      const light = new THREE.SpotLight(0xfff0d0, 1.2, 12, 0.4, 0.5);
+      const light = new THREE.SpotLight(0xfff0d0, 1.5, 12, 0.4, 0.5);
       light.position.set(p.x, 6, -0.5);
       light.target = ped;
       scene.add(light);
@@ -385,8 +397,6 @@
     // ==========================================
     // 4. Room Transition Logic
     // ==========================================
-    let currentRoom = 0;
-
     function switchRoom(roomIdx) {
       currentRoom = roomIdx;
       updateRoomBanner(roomIdx);
@@ -403,16 +413,12 @@
       targetCamPosX = 0;
     }
 
-    // 初期表示のセットアップ
+    // 初期化実行
     switchRoom(0);
 
     // ==========================================
     // 5. Controls & Interaction
     // ==========================================
-    let isDragging = false;
-    let previousMouseX = 0;
-    let targetCamPosX = 0;
-
     window.addEventListener('pointerdown', (e) => {
       if (e.target.tagName === 'CANVAS') {
         isDragging = true;
@@ -457,8 +463,6 @@
     // ==========================================
     // 6. Quiz Modal Logic
     // ==========================================
-    let currentActivePerson = null;
-
     function openQuiz(personData) {
       currentActivePerson = personData;
       document.getElementById('q-name').innerText = personData.name;
@@ -528,9 +532,10 @@
     function animate() {
       requestAnimationFrame(animate);
 
+      // Smooth Camera Movement
       camera.position.x += (targetCamPosX - camera.position.x) * 0.1;
-      camera.position.y = 2.8;
-      camera.position.z = 2.8;
+      camera.position.y = 2.5;
+      camera.position.z = 5.0;
       camera.lookAt(camera.position.x, 1.8, -3.5);
 
       renderer.render(scene, camera);
@@ -543,6 +548,7 @@
       camera.updateProjectionMatrix();
     });
 
+    // レンダリング開始
     animate();
   </script>
 </body>
