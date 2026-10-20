@@ -149,17 +149,19 @@ button.go-btn:hover, a.go-btn:hover{background:#2b3a63}
 <p class="lead">入場時に10,000コインを持ち、コインを使って遊びます。左の切り取り部分は、1回の料金です。緑は屋内、金色は屋外の施設です。</p>
 
 <ul class="tickets">
-  <!-- 1. 量子殿堂博物館（未完成のため準備中） -->
-  <li class="ticket indoor">
-    <div class="stub"><span class="free">未定</span><span class="unit">博物館内の<br>クイズで<br>コインを獲得</span></div>
-    <div class="body">
-      <h3>量子殿堂博物館</h3>
-      <p class="motif">博物館</p>
-      <p class="desc">量子論の偉人の胸像と碑文を見て回り、クイズに答えるとコインがもらえます。</p>
-      <div class="chips"><span class="chip">屋内</span><span class="chip wait">準備中</span></div>
-    </div>
-  </li>
-
+  
+  <!-- 1. 量子殿堂博物館 -->
+<li class="ticket indoor">
+  <div class="stub"><span class="free">無料</span><span class="unit">博物館内の<br>クイズで<br>コインを獲得</span></div>
+  <div class="body">
+    <h3>量子殿堂博物館</h3>
+    <p class="motif">博物館</p>
+    <p class="desc">量子論の偉人の胸像と碑文を見て回り、クイズに答えるとコインがもらえます。</p>
+    <div class="chips"><span class="chip">屋内</span></div>
+    <button class="play-btn" onclick="enterAttraction('quantum_hall_of_fame_museum_3d.html', 0)">遊ぶ (無料)</button>
+  </div>
+</li>
+  
   <!-- 2. 経路積分コースター -->
   <li class="ticket">
     <div class="stub"><span class="price">2,000</span><span class="unit">コイン</span></div>
