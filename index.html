@@ -37,7 +37,7 @@ a:focus-visible,button:focus-visible{outline:3px solid var(--gold);outline-offse
 .entry{
   position:relative;
   display:grid;
-  grid-template-columns:1fr 11rem;
+  grid-template-columns:1fr 13rem;
   background:var(--paper);
   color:var(--ink);
   border-radius:14px;
@@ -59,8 +59,13 @@ a:focus-visible,button:focus-visible{outline:3px solid var(--gold);outline-offse
 }
 .entry .tear::before{top:-13px}
 .entry .tear::after{bottom:-13px}
-.entry .coins{font-size:2.3rem;font-weight:700;line-height:1.1}
-.entry .coins-label{font-size:.9rem}
+.entry .coins{font-size:2.1rem;font-weight:700;line-height:1.1}
+.entry .coins-label{font-size:.85rem;margin-bottom:8px}
+.reset-btn{
+  font-size:.75rem;padding:3px 10px;background:var(--ink);color:#fff;border:none;border-radius:999px;cursor:pointer;
+  font-family:inherit;
+}
+.reset-btn:hover{background:#2b3a63}
 
 h2{font-size:1.35rem;margin:0 0 6px;font-weight:700}
 .lead{margin:0 0 22px;color:#b9c4d9;max-width:40em}
@@ -95,11 +100,13 @@ h2{font-size:1.35rem;margin:0 0 6px;font-weight:700}
 .chips{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .chip{font-size:.78rem;padding:1px 10px;border-radius:999px;border:1.5px solid var(--ink)}
 .chip.wait{border-color:var(--mute);color:var(--mute)}
-a.go{
+
+button.go-btn, a.go-btn {
   display:inline-block;font-size:.85rem;font-weight:700;text-decoration:none;
-  background:var(--ink);color:#fff;padding:3px 14px;border-radius:999px;
+  background:var(--ink);color:#fff;padding:4px 16px;border-radius:999px;border:none;cursor:pointer;
+  font-family:inherit;
 }
-a.go:hover{background:#2b3a63}
+button.go-btn:hover, a.go-btn:hover{background:#2b3a63}
 
 .sky{list-style:none;margin:0 0 52px;padding:0;display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
 .sky li{
@@ -132,8 +139,9 @@ a.go:hover{background:#2b3a63}
     <p>量子力学の世界観を、アトラクションで味わうテーマパークです。ここは、PC向けの本編を作る前に、各アトラクションの動きと雰囲気を確かめるための、ブラウザ用プロトタイプ集です。</p>
   </div>
   <div class="tear">
-    <span class="coins">10,000</span>
-    <span class="coins-label">コインつき</span>
+    <span class="coins" id="user-coins">10,000</span>
+    <span class="coins-label">所持コイン</span>
+    <button class="reset-btn" onclick="resetCoins()">10,000にリセット</button>
   </div>
 </section>
 
@@ -141,6 +149,7 @@ a.go:hover{background:#2b3a63}
 <p class="lead">入場時に10,000コインを持ち、コインを使って遊びます。左の切り取り部分は、1回の料金です。緑は屋内、金色は屋外の施設です。</p>
 
 <ul class="tickets">
+  <!-- 1. 量子殿堂博物館（未完成のため準備中） -->
   <li class="ticket indoor">
     <div class="stub"><span class="free">未定</span><span class="unit">博物館内の<br>クイズで<br>コインを獲得</span></div>
     <div class="body">
@@ -150,85 +159,130 @@ a.go:hover{background:#2b3a63}
       <div class="chips"><span class="chip">屋内</span><span class="chip wait">準備中</span></div>
     </div>
   </li>
+
+  <!-- 2. 経路積分コースター -->
   <li class="ticket">
     <div class="stub"><span class="price">2,000</span><span class="unit">コイン</span></div>
     <div class="body">
       <h3>経路積分コースター</h3>
       <p class="motif">ジェットコースター</p>
       <p class="desc">遠回りのコースほど、ぐるぐる回転しながら進みます。全部で6つのコースがあります。</p>
-      <div class="chips"><span class="chip">屋外</span><span class="chip wait">準備中</span></div>
+      <div class="chips">
+        <span class="chip">屋外</span>
+        <button class="go-btn" onclick="enterAttraction('path_integral_coaster_3d_v2_outdoor.html', 2000)">遊ぶ (2,000G)</button>
+      </div>
     </div>
   </li>
+
+  <!-- 3. 射映画館 -->
   <li class="ticket indoor">
     <div class="stub"><span class="price">500</span><span class="unit">コイン</span></div>
     <div class="body">
       <h3>射映画館</h3>
       <p class="motif">映画館</p>
       <p class="desc">重ね合わせの映像は、見つめた瞬間に1つに確定して動き出します。目を離すと元に戻ります。</p>
-      <div class="chips"><span class="chip">屋内</span><span class="chip wait">準備中</span></div>
+      <div class="chips">
+        <span class="chip">屋内</span>
+        <button class="go-btn" onclick="enterAttraction('projection_cinema_d2_observation.html', 500)">遊ぶ (500G)</button>
+      </div>
     </div>
   </li>
+
+  <!-- 4. ブロッホ球観覧車 -->
   <li class="ticket">
     <div class="stub"><span class="price">1,500</span><span class="unit">コイン</span></div>
     <div class="body">
       <h3>ブロッホ球観覧車</h3>
       <p class="motif">観覧車</p>
       <p class="desc">球の形の観覧車です。北極と南極と赤道に、|0⟩や|1⟩の標識が立っています。</p>
-      <div class="chips"><span class="chip">屋外</span><span class="chip wait">準備中</span></div>
+      <div class="chips">
+        <span class="chip">屋外</span>
+        <button class="go-btn" onclick="enterAttraction('bloch_sphere_ferris_wheel_v2.html', 1500)">遊ぶ (1,500G)</button>
+      </div>
     </div>
   </li>
+
+  <!-- 5. 排他コーヒーカップ -->
   <li class="ticket">
     <div class="stub"><span class="price">1,000</span><span class="unit">コイン</span></div>
     <div class="body">
       <h3>排他コーヒーカップ</h3>
       <p class="motif">コーヒーカップ</p>
       <p class="desc">同じ向きの先客がいると、空席があっても弾き出されます。逆向きなら、同じカップに座れます。</p>
-      <div class="chips"><span class="chip">屋外</span><span class="chip wait">準備中</span></div>
+      <div class="chips">
+        <span class="chip">屋外</span>
+        <button class="go-btn" onclick="enterAttraction('exclusion_coffee_cups_concept.html', 1000)">遊ぶ (1,000G)</button>
+      </div>
     </div>
   </li>
+
+  <!-- 6. 波動スライダー -->
   <li class="ticket">
     <div class="stub"><span class="price">1,500</span><span class="unit">コイン</span></div>
     <div class="body">
       <h3>波動スライダー</h3>
       <p class="motif">ウォータースライダー</p>
       <p class="desc">ポテンシャルを選ぶと波動関数が決まります。その波に揺られながら、水路を滑ります。</p>
-      <div class="chips"><span class="chip">屋外</span><span class="chip wait">準備中</span></div>
+      <div class="chips">
+        <span class="chip">屋外</span>
+        <button class="go-btn" onclick="enterAttraction('wave_slider_concept.html', 1500)">遊ぶ (1,500G)</button>
+      </div>
     </div>
   </li>
+
+  <!-- 7. シュレディンガーの猫 -->
   <li class="ticket">
     <div class="stub"><span class="free">無料</span><span class="unit">園内の<br>仕掛け</span></div>
     <div class="body">
       <h3>シュレディンガーの猫</h3>
       <p class="motif">園内をうろつく黒猫</p>
       <p class="desc">目が合うと逃げ出して、箱に飛び込みます。箱のふたが閉まると、中は見えません。</p>
-      <div class="chips"><span class="chip">屋外</span><span class="chip wait">準備中</span></div>
+      <div class="chips">
+        <span class="chip">屋外</span>
+        <button class="go-btn" onclick="enterAttraction('schrodinger_cat_v2_closed_lid.html', 0)">見る (無料)</button>
+      </div>
     </div>
   </li>
+
+  <!-- 8. ブラケット特急 -->
   <li class="ticket">
     <div class="stub"><span class="price">1,000</span><span class="unit">コイン</span></div>
     <div class="body">
       <h3>ブラケット特急</h3>
       <p class="motif">蒸気機関車のトレイン</p>
       <p class="desc">アハラノフ=ボーム駅から出発して、長い鉄橋と、量子トンネルを通ります。</p>
-      <div class="chips"><span class="chip">屋外</span><span class="chip wait">準備中</span></div>
+      <div class="chips">
+        <span class="chip">屋外</span>
+        <button class="go-btn" onclick="enterAttraction('bracket_express_v2_steam_quantum_tunnel.html', 1000)">遊ぶ (1,000G)</button>
+      </div>
     </div>
   </li>
+
+  <!-- 9. 電子軌道メリーゴーランド -->
   <li class="ticket">
     <div class="stub"><span class="price">1,000</span><span class="unit">コイン</span></div>
     <div class="body">
       <h3>電子軌道メリーゴーランド</h3>
       <p class="motif">メリーゴーランド</p>
       <p class="desc">ユニコーンに乗ると、水素原子の電子軌道に沿って飛び回ります。軌道は途中で変わります。</p>
-      <div class="chips"><span class="chip">屋外</span><span class="chip wait">準備中</span></div>
+      <div class="chips">
+        <span class="chip">屋外</span>
+        <button class="go-btn" onclick="enterAttraction('electron_orbital_carousel_concept_fixed.html', 1000)">遊ぶ (1,000G)</button>
+      </div>
     </div>
   </li>
+
+  <!-- 10. 二重スリット射的 -->
   <li class="ticket">
     <div class="stub"><span class="price">700</span><span class="unit">コイン</span></div>
     <div class="body">
       <h3>二重スリット射的</h3>
       <p class="motif">射的</p>
       <p class="desc">電子ビームを撃って、景品を狙います。観測する/しないで、当たる場所が変わります。</p>
-      <div class="chips"><span class="chip">屋外</span><span class="chip wait">準備中</span></div>
+      <div class="chips">
+        <span class="chip">屋外</span>
+        <button class="go-btn" onclick="enterAttraction('double_slit_shooting_concept.html', 700)">遊ぶ (700G)</button>
+      </div>
     </div>
   </li>
 </ul>
@@ -239,12 +293,16 @@ a.go:hover{background:#2b3a63}
   <li>
     <h3>あなたが観測している時だけ存在する月</h3>
     <p>夜空の月を右クリックすると、ある言葉が表示されます。</p>
-    <div class="chips"><span class="chip wait">準備中</span></div>
+    <div class="chips">
+      <a href="observed_moon_day_night_concept.html" class="go-btn">見る</a>
+    </div>
   </li>
   <li>
     <h3>ファインマンダイアグラムの雷</h3>
     <p>雨の日に落ちる雷は、時間の順に、ファインマン図の形を描きます。</p>
-    <div class="chips"><span class="chip wait">準備中</span></div>
+    <div class="chips">
+      <a href="rain_feynman_lightning_time_ordered.html" class="go-btn">見る</a>
+    </div>
   </li>
 </ul>
 
@@ -254,5 +312,41 @@ a.go:hover{background:#2b3a63}
 </section>
 
 </div>
+
+<script>
+// --- コイン管理＆遷移システム ---
+
+if (localStorage.getItem('quantumParkCoins') === null) {
+  localStorage.setItem('quantumParkCoins', '10000');
+}
+
+function updateCoinDisplay() {
+  const currentCoins = parseInt(localStorage.getItem('quantumParkCoins') || '0');
+  document.getElementById('user-coins').innerText = currentCoins.toLocaleString();
+}
+
+function enterAttraction(fileName, cost) {
+  let currentCoins = parseInt(localStorage.getItem('quantumParkCoins') || '0');
+
+  if (currentCoins >= cost) {
+    if (cost > 0) {
+      currentCoins -= cost;
+      localStorage.setItem('quantumParkCoins', currentCoins.toString());
+      updateCoinDisplay();
+    }
+    window.location.href = fileName;
+  } else {
+    alert(`コインが足りません！\n必要: ${cost.toLocaleString()} G / 所持: ${currentCoins.toLocaleString()} G`);
+  }
+}
+
+function resetCoins() {
+  localStorage.setItem('quantumParkCoins', '10000');
+  updateCoinDisplay();
+  alert('所持コインを 10,000 G にリセットしました！');
+}
+
+updateCoinDisplay();
+</script>
 </body>
 </html>
