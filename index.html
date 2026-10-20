@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>量子テーマパーク プロトタイプ集</title>
+<meta name="description" content="量子力学の世界観を味わえるテーマパークの、ブラウザで試せるプロトタイプ集です。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --night:#0f1a2e;
+  --night-2:#16253f;
+  --paper:#eef2f7;
+  --ink:#1a2238;
+  --gold:#e0a82e;
+  --mint:#8fd8cc;
+  --mute:#5d6a82;
+  --line:rgba(26,34,56,.35);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  background:var(--night);
+  background-image:radial-gradient(circle at 15% 0%,#1d3157 0,transparent 45%),radial-gradient(circle at 90% 20%,#1a2c4d 0,transparent 40%);
+  color:#e8edf6;
+  font-family:"Zen Maru Gothic","Hiragino Maru Gothic ProN","Hiragino Sans","Yu Gothic","Meiryo",sans-serif;
+  font-weight:500;
+  line-height:1.75;
+}
+a{color:inherit}
+a:focus-visible,button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+.wrap{max-width:1040px;margin:0 auto;padding:40px 20px 72px}
+
+.entry{
+  position:relative;
+  display:grid;
+  grid-template-columns:1fr 11rem;
+  background:var(--paper);
+  color:var(--ink);
+  border-radius:14px;
+  margin:8px 0 48px;
+  overflow:hidden;
+}
+.entry .main{padding:34px 36px 30px}
+.entry h1{margin:0 0 10px;font-size:clamp(1.9rem,5vw,3rem);line-height:1.2;font-weight:700;letter-spacing:.04em}
+.entry p{margin:0;max-width:34em}
+.entry .tear{
+  position:relative;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:var(--gold);
+  border-left:3px dashed var(--ink);
+  text-align:center;padding:20px 12px;
+}
+.entry .tear::before,.entry .tear::after{
+  content:"";position:absolute;left:-14px;width:25px;height:25px;border-radius:50%;background:var(--night);
+}
+.entry .tear::before{top:-13px}
+.entry .tear::after{bottom:-13px}
+.entry .coins{font-size:2.3rem;font-weight:700;line-height:1.1}
+.entry .coins-label{font-size:.9rem}
+
+h2{font-size:1.35rem;margin:0 0 6px;font-weight:700}
+.lead{margin:0 0 22px;color:#b9c4d9;max-width:40em}
+
+.tickets{list-style:none;margin:0 0 52px;padding:0;display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.ticket{
+  display:grid;
+  grid-template-columns:6.6rem 1fr;
+  background:var(--paper);
+  color:var(--ink);
+  border-radius:10px;
+  overflow:hidden;
+}
+.stub{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:12px 6px;text-align:center;
+  background:var(--gold);
+}
+.ticket.indoor .stub{background:var(--mint)}
+.stub .price{font-size:1.45rem;font-weight:700;line-height:1.1}
+.stub .unit{font-size:.78rem}
+.stub .free{font-size:1.1rem;font-weight:700}
+.body{position:relative;padding:14px 16px 14px 18px;border-left:2px dashed var(--line)}
+.body::before,.body::after{
+  content:"";position:absolute;left:-10px;width:18px;height:18px;border-radius:50%;background:var(--night);
+}
+.body::before{top:-9px}
+.body::after{bottom:-9px}
+.body h3{margin:0;font-size:1.08rem;font-weight:700}
+.motif{margin:0;font-size:.82rem;color:var(--mute)}
+.desc{margin:6px 0 10px;font-size:.92rem}
+.chips{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chip{font-size:.78rem;padding:1px 10px;border-radius:999px;border:1.5px solid var(--ink)}
+.chip.wait{border-color:var(--mute);color:var(--mute)}
+a.go{
+  display:inline-block;font-size:.85rem;font-weight:700;text-decoration:none;
+  background:var(--ink);color:#fff;padding:3px 14px;border-radius:999px;
+}
+a.go:hover{background:#2b3a63}
+
+.sky{list-style:none;margin:0 0 52px;padding:0;display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.sky li{
+  background:var(--night-2);border:1.5px solid rgba(143,216,204,.45);border-radius:10px;padding:14px 18px;
+}
+.sky h3{margin:0 0 2px;font-size:1.05rem}
+.sky p{margin:0 0 8px;font-size:.92rem;color:#c9d3e6}
+
+.notes{border-top:1.5px dashed rgba(232,237,246,.35);padding-top:22px;color:#b9c4d9;font-size:.9rem}
+.notes p{margin:0 0 8px;max-width:44em}
+
+@media (max-width:760px){
+  .entry{grid-template-columns:1fr}
+  .entry .tear{border-left:0;border-top:3px dashed var(--ink);flex-direction:row;gap:10px;padding:14px}
+  .entry .tear::before,.entry .tear::after{top:-13px;left:auto}
+  .entry .tear::before{left:-13px}
+  .entry .tear::after{right:-13px;bottom:auto}
+  .entry .main{padding:26px 22px 22px}
+  .tickets,.sky{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<section class="entry" aria-label="入場券">
+  <div class="main">
+    <h1>量子テーマパーク</h1>
+    <p>量子力学の世界観を、アトラクションで味わうテーマパークです。ここは、PC向けの本編を作る前に、各アトラクションの動きと雰囲気を確かめるための、ブラウザ用プロトタイプ集です。</p>
+  </div>
+  <div class="tear">
+    <span class="coins">10,000</span>
+    <span class="coins-label">コインつき</span>
+  </div>
+</section>
+
+<h2>アトラクション</h2>
+<p class="lead">入場時に10,000コインを持ち、コインを使って遊びます。左の切り取り部分は、1回の料金です。緑は屋内、金色は屋外の施設です。</p>
+
+<ul class="tickets">
+  <li class="ticket indoor">
+    <div class="stub"><span class="free">未定</span><span class="unit">博物館内の<br>クイズで<br>コインを獲得</span></div>
+    <div class="body">
+      <h3>量子殿堂博物館</h3>
+      <p class="motif">博物館</p>
+      <p class="desc">量子論の偉人の胸像と碑文を見て回り、クイズに答えるとコインがもらえます。</p>
+      <div class="chips"><span class="chip">屋内</span><span class="chip wait">準備中</span></div>
+    </div>
+  </li>
+  <li class="ticket">
+    <div class="stub"><span class="price">2,000</span><span class="unit">コイン</span></div>
+    <div class="body">
+      <h3>経路積分コースター</h3>
+      <p class="motif">ジェットコースター</p>
+      <p class="desc">遠回りのコースほど、ぐるぐる回転しながら進みます。全部で6つのコースがあります。</p>
+      <div class="chips"><span class="chip">屋外</span><span class="chip wait">準備中</span></div>
+    </div>
+  </li>
+  <li class="ticket indoor">
+    <div class="stub"><span class="price">500</span><span class="unit">コイン</span></div>
+    <div class="body">
+      <h3>射映画館</h3>
+      <p class="motif">映画館</p>
+      <p class="desc">重ね合わせの映像は、見つめた瞬間に1つに確定して動き出します。目を離すと元に戻ります。</p>
+      <div class="chips"><span class="chip">屋内</span><span class="chip wait">準備中</span></div>
+    </div>
+  </li>
+  <li class="ticket">
+    <div class="stub"><span class="price">1,500</span><span class="unit">コイン</span></div>
+    <div class="body">
+      <h3>ブロッホ球観覧車</h3>
+      <p class="motif">観覧車</p>
+      <p class="desc">球の形の観覧車です。北極と南極と赤道に、|0⟩や|1⟩の標識が立っています。</p>
+      <div class="chips"><span class="chip">屋外</span><span class="chip wait">準備中</span></div>
+    </div>
+  </li>
+  <li class="ticket">
+    <div class="stub"><span class="price">1,000</span><span class="unit">コイン</span></div>
+    <div class="body">
+      <h3>排他コーヒーカップ</h3>
+      <p class="motif">コーヒーカップ</p>
+      <p class="desc">同じ向きの先客がいると、空席があっても弾き出されます。逆向きなら、同じカップに座れます。</p>
+      <div class="chips"><span class="chip">屋外</span><span class="chip wait">準備中</span></div>
+    </div>
+  </li>
+  <li class="ticket">
+    <div class="stub"><span class="price">1,500</span><span class="unit">コイン</span></div>
+    <div class="body">
+      <h3>波動スライダー</h3>
+      <p class="motif">ウォータースライダー</p>
+      <p class="desc">ポテンシャルを選ぶと波動関数が決まります。その波に揺られながら、水路を滑ります。</p>
+      <div class="chips"><span class="chip">屋外</span><span class="chip wait">準備中</span></div>
+    </div>
+  </li>
+  <li class="ticket">
+    <div class="stub"><span class="free">無料</span><span class="unit">園内の<br>仕掛け</span></div>
+    <div class="body">
+      <h3>シュレディンガーの猫</h3>
+      <p class="motif">園内をうろつく黒猫</p>
+      <p class="desc">目が合うと逃げ出して、箱に飛び込みます。箱のふたが閉まると、中は見えません。</p>
+      <div class="chips"><span class="chip">屋外</span><span class="chip wait">準備中</span></div>
+    </div>
+  </li>
+  <li class="ticket">
+    <div class="stub"><span class="price">1,000</span><span class="unit">コイン</span></div>
+    <div class="body">
+      <h3>ブラケット特急</h3>
+      <p class="motif">蒸気機関車のトレイン</p>
+      <p class="desc">アハラノフ=ボーム駅から出発して、長い鉄橋と、量子トンネルを通ります。</p>
+      <div class="chips"><span class="chip">屋外</span><span class="chip wait">準備中</span></div>
+    </div>
+  </li>
+  <li class="ticket">
+    <div class="stub"><span class="price">1,000</span><span class="unit">コイン</span></div>
+    <div class="body">
+      <h3>電子軌道メリーゴーランド</h3>
+      <p class="motif">メリーゴーランド</p>
+      <p class="desc">ユニコーンに乗ると、水素原子の電子軌道に沿って飛び回ります。軌道は途中で変わります。</p>
+      <div class="chips"><span class="chip">屋外</span><span class="chip wait">準備中</span></div>
+    </div>
+  </li>
+  <li class="ticket">
+    <div class="stub"><span class="price">700</span><span class="unit">コイン</span></div>
+    <div class="body">
+      <h3>二重スリット射的</h3>
+      <p class="motif">射的</p>
+      <p class="desc">電子ビームを撃って、景品を狙います。観測する/しないで、当たる場所が変わります。</p>
+      <div class="chips"><span class="chip">屋外</span><span class="chip wait">準備中</span></div>
+    </div>
+  </li>
+</ul>
+
+<h2>空のギミック</h2>
+<p class="lead">園内全体の仕掛けです。昼と夜、晴れと雨を切り替えて見られます。</p>
+<ul class="sky">
+  <li>
+    <h3>あなたが観測している時だけ存在する月</h3>
+    <p>夜空の月を右クリックすると、ある言葉が表示されます。</p>
+    <div class="chips"><span class="chip wait">準備中</span></div>
+  </li>
+  <li>
+    <h3>ファインマンダイアグラムの雷</h3>
+    <p>雨の日に落ちる雷は、時間の順に、ファインマン図の形を描きます。</p>
+    <div class="chips"><span class="chip wait">準備中</span></div>
+  </li>
+</ul>
+
+<section class="notes">
+  <p>これは、ゲーム本編を作る前の確認用プロトタイプです。見た目や数値は、本編で変わります。</p>
+  <p>3Dの表示にはGPUを使います。PCのブラウザでの閲覧をおすすめします。動作が重いときは、他のタブを閉じてください。</p>
+</section>
+
+</div>
+</body>
+</html>
