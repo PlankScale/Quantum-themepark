@@ -202,10 +202,9 @@
 
   <script>
     // ==========================================
-    // 1. Data Definition: 13 Physicists & Quizzes
+    // 1. Data Definition
     // ==========================================
     const physicistsData = [
-      // ROOM 0: 第1展示室（量子論の黎明）
       { id: 'planck', room: 0, x: -4.5, name: 'MAX PLANCK', years: '1858 - 1947', achievement: 'Nobel Prize in Physics, 1918\nQuantum Hypothesis & Planck Constant',
         quiz: { q: 'マックス・プランクの出身国は？', options: ['ドイツ 🇩🇪', 'オーストリア 🇦🇹', 'スイス 🇨🇭'], correct: 0 } },
       { id: 'einstein', room: 0, x: -1.5, name: 'ALBERT EINSTEIN', years: '1879 - 1955', achievement: 'Nobel Prize in Physics, 1921\nPhotoelectric Effect & Light Quanta',
@@ -215,7 +214,6 @@
       { id: 'debroglie', room: 0, x: 4.5, name: 'LOUIS DE BROGLIE', years: '1892 - 1987', achievement: 'Nobel Prize in Physics, 1929\nMatter Waves (Wave-Particle Duality)',
         quiz: { q: 'ルイ・ド・ブロイの出身国は？', options: ['フランス 🇫🇷', 'ベルギー 🇧🇪', 'スイス 🇨🇭'], correct: 0 } },
 
-      // ROOM 1: 第2展示室（量子力学の確立：ハイゼンベルク＆シュレディンガー同室）
       { id: 'heisenberg', room: 1, x: -5.0, name: 'WERNER HEISENBERG', years: '1901 - 1976', achievement: 'Nobel Prize in Physics, 1932\nMatrix Mechanics & Uncertainty Principle',
         quiz: { q: 'ヴェルナー・ハイゼンベルクの出身国は？', options: ['ハンガリー 🇭🇺', 'ドイツ 🇩🇪', 'オーストリア 🇦🇹'], correct: 1 } },
       { id: 'schrodinger', room: 1, x: -3.0, name: 'ERWIN SCHRÖDINGER', years: '1887 - 1961', achievement: 'Nobel Prize in Physics, 1933\nWave Mechanics & Schrödinger Equation',
@@ -229,7 +227,6 @@
       { id: 'jordan', room: 1, x: 5.0, name: 'PASCUAL JORDAN', years: '1902 - 1980', achievement: 'Matrix Mechanics & Quantum Field Theory\nCo-author of Dreimännerarbeit',
         quiz: { q: 'パスカル・ヨルダンの出身国は？', options: ['ドイツ 🇩🇪', 'スペイン 🇪🇸', 'オーストリア 🇦🇹'], correct: 0 } },
 
-      // ROOM 2: 第3展示室（QEDと場の量子論）
       { id: 'feynman', room: 2, x: -3.0, name: 'RICHARD FEYNMAN', years: '1918 - 1988', achievement: 'Nobel Prize in Physics, 1965\nPath Integral & Feynman Diagrams',
         quiz: { q: 'リチャード・ファインマンの出身国は？', options: ['カナダ 🇨🇦', 'アメリカ 🇺🇸', 'イギリス 🇬🇧'], correct: 1 } },
       { id: 'schwinger', room: 2, x: 0.0, name: 'JULIAN SCHWINGER', years: '1918 - 1994', achievement: 'Nobel Prize in Physics, 1965\nRelativistic Quantum Electrodynamics (QED)',
@@ -239,7 +236,7 @@
     ];
 
     // ==========================================
-    // 2. Economy & State Management
+    // 2. Economy & State
     // ==========================================
     let currentCoins = parseInt(localStorage.getItem('quantumParkCoins')) || 10000;
     const answeredList = JSON.parse(localStorage.getItem('museumAnsweredQuizzes') || '[]');
@@ -265,30 +262,25 @@
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     container.appendChild(renderer.domElement);
 
-    // Lights
     scene.add(new THREE.AmbientLight(0xffffff, 0.6));
     scene.add(new THREE.HemisphereLight(0xfff4e0, 0x2a2540, 0.4));
 
-    // Texture Generator for Gold Plaques & Banners
-   // Texture Generator for Gold Plaques & Banners
     function createCanvasTexture(width, height, drawFn) {
       const c = document.createElement('canvas');
       c.width = width; c.height = height;
       const ctx = c.getContext('2d');
       drawFn(ctx, width, height);
       const t = new THREE.CanvasTexture(c);
-      t.needsUpdate = true; // テクスチャの更新を明示
+      t.needsUpdate = true;
       return t;
     }
 
-    // Materials
     const bronzeMat = new THREE.MeshPhongMaterial({ color: 0x906030, specular: 0xffd9a0, shininess: 60 });
     const hairMat = new THREE.MeshPhongMaterial({ color: 0x603f20, specular: 0xcaa060, shininess: 40 });
     const pedestalMat = new THREE.MeshLambertMaterial({ color: 0xc8c0b0 });
     const wallMat = new THREE.MeshLambertMaterial({ color: 0x27223d });
     const trimMat = new THREE.MeshLambertMaterial({ color: 0xb8923f });
 
-    // Build Museum Architecture
     const roomGroup = new THREE.Group();
     scene.add(roomGroup);
 
@@ -312,7 +304,7 @@
     backWall.position.set(0, 4, -7);
     roomGroup.add(backWall);
 
-    // Gold Trim
+    // Trim
     const trim = new THREE.Mesh(new THREE.BoxGeometry(28, 0.15, 0.1), trimMat);
     trim.position.set(0, 0.8, -6.95);
     roomGroup.add(trim);
@@ -324,9 +316,11 @@
       '第3展示室：QEDと場の量子論 (Feynman, Schwinger, Tomonaga)'
     ];
 
-    let bannerMesh;
+    let bannerMesh = null;
     function updateRoomBanner(roomIdx) {
-      if (bannerMesh) roomGroup.remove(bannerMesh);
+      if (bannerMesh) {
+        roomGroup.remove(bannerMesh);
+      }
       const bannerTex = createCanvasTexture(1024, 128, (ctx, w, h) => {
         ctx.fillStyle = '#1b1830'; ctx.fillRect(0, 0, w, h);
         ctx.strokeStyle = '#b8923f'; ctx.lineWidth = 6; ctx.strokeRect(6, 6, w - 12, h - 12);
@@ -346,11 +340,9 @@
       g.position.set(p.x, 0, -3.5);
       g.userData = p;
 
-      // Pedestal
       const ped = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.3, 1.4), pedestalMat);
       ped.position.y = 0.65; g.add(ped);
 
-      // Gold Plaque (Name / Years / Achievement)
       const plaqueTex = createCanvasTexture(512, 256, (ctx, w, h) => {
         ctx.fillStyle = '#a8803a'; ctx.fillRect(0, 0, w, h);
         ctx.strokeStyle = '#5a421a'; ctx.lineWidth = 6; ctx.strokeRect(4, 4, w - 8, h - 8);
@@ -367,7 +359,6 @@
       const plaque = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.6), new THREE.MeshBasicMaterial({ map: plaqueTex }));
       plaque.position.set(0, 0.68, 0.71); g.add(plaque);
 
-      // Bronze Bust Group
       const bust = new THREE.Group(); bust.position.y = 1.3;
       const base = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.58, 0.35, 16), bronzeMat);
       base.position.y = 0.18; bust.add(base);
@@ -383,7 +374,6 @@
       g.add(bust);
       scene.add(g);
 
-      // Spotlight per bust
       const light = new THREE.SpotLight(0xfff0d0, 1.2, 12, 0.4, 0.5);
       light.position.set(p.x, 6, -0.5);
       light.target = ped;
@@ -396,28 +386,24 @@
     // 4. Room Transition Logic
     // ==========================================
     let currentRoom = 0;
-    let cameraTargetX = 0;
 
     function switchRoom(roomIdx) {
       currentRoom = roomIdx;
       updateRoomBanner(roomIdx);
 
-      // Filter Visibility
       interactiveBusts.forEach(b => {
         b.visible = (b.userData.room === currentRoom);
       });
 
-      // Update Active Tab Button
       const tabs = document.querySelectorAll('.tab-btn');
       tabs.forEach((tab, idx) => {
         tab.classList.toggle('active', idx === currentRoom);
       });
 
-      // Reset Camera Pan
       targetCamPosX = 0;
     }
 
-    updateRoomBanner(0);
+    // 初期表示のセットアップ
     switchRoom(0);
 
     // ==========================================
@@ -444,7 +430,6 @@
 
     window.addEventListener('pointerup', () => isDragging = false);
 
-    // Click Detection (Raycaster)
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
 
@@ -543,7 +528,6 @@
     function animate() {
       requestAnimationFrame(animate);
 
-      // Smooth Camera Movement
       camera.position.x += (targetCamPosX - camera.position.x) * 0.1;
       camera.position.y = 2.8;
       camera.position.z = 2.8;
